@@ -1,22 +1,21 @@
 import React from 'react';
+import { LETTER_VALUES } from '../utils/scoring';
 
 interface LetterTilesProps {
   word: string;
-  letterValues: { [key: string]: number };
   letterMultipliers: number[];
-  tilesUsed: number;
   bingoBonus: boolean;
-  onLetterMultiplierCycle: (index: number) => void;
+  tilesUsed: number;
+  onLetterMultiplierChange: (index: number) => void;
   onResetAll: () => void;
 }
 
-export const LetterTiles: React.FC<LetterTilesProps> = ({
+const LetterTiles: React.FC<LetterTilesProps> = ({
   word,
-  letterValues,
   letterMultipliers,
-  tilesUsed,
   bingoBonus,
-  onLetterMultiplierCycle,
+  tilesUsed,
+  onLetterMultiplierChange,
   onResetAll
 }) => {
   if (!word) return null;
@@ -38,14 +37,14 @@ export const LetterTiles: React.FC<LetterTilesProps> = ({
       <div className="flex flex-wrap gap-2 justify-center">
         {word.split('').map((letter, index) => {
           const multiplier = letterMultipliers[index] || 1;
-          const letterValue = letterValues[letter.toUpperCase()] || 0;
+          const letterValue = LETTER_VALUES[letter.toUpperCase() as keyof typeof LETTER_VALUES] || 0;
           const adjustedValue = letterValue * multiplier;
           
           return (
             <button
               key={index}
-              onClick={() => onLetterMultiplierCycle(index)}
-              className={`w-12 h-12 sm:w-16 sm:h-16 rounded-lg border-2 font-bold text-sm sm:text-lg transition-all transform hover:scale-105 active:scale-95 ${
+              onClick={() => onLetterMultiplierChange(index)}
+              className={`w-16 h-16 rounded-lg border-2 font-bold text-lg transition-all transform hover:scale-105 active:scale-95 ${
                 multiplier === 1 
                   ? 'bg-yellow-100 border-yellow-400 text-yellow-800 hover:bg-yellow-200'
                   : multiplier === 2 
@@ -54,7 +53,7 @@ export const LetterTiles: React.FC<LetterTilesProps> = ({
               }`}
             >
               <div className="text-center">
-                <div className="text-sm sm:text-lg font-bold">{letter.toUpperCase()}</div>
+                <div className="text-lg font-bold">{letter.toUpperCase()}</div>
                 <div className="text-xs leading-none">
                   {multiplier === 1 ? letterValue : `${letterValue}×${multiplier}`}
                 </div>
@@ -72,3 +71,6 @@ export const LetterTiles: React.FC<LetterTilesProps> = ({
     </div>
   );
 };
+
+export default LetterTiles;
+

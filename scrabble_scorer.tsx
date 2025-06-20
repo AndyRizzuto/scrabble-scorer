@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
-import { Users, Check, X, RotateCcw, BarChart3 } from 'lucide-react';
+// REFACTORED VERSION - See /src/components/ for the new component structure
+// This file now imports the decomposed components
 
-const ScrabbleScorer = () => {
+import React from 'react';
+import { ScrabbleScorer as RefactoredScrabbleScorer } from './src/components';
+
+// Export the new refactored version
+export { ScrabbleScorer } from './src/components';
+
+// Keep the original implementation as legacy
+const OriginalScrabbleScorer = () => {
   const [scores, setScores] = useState({ player1: 0, player2: 0 });
   const [playerNames, setPlayerNames] = useState({ player1: 'Player 1', player2: 'Player 2' });
   const [currentPlayer, setCurrentPlayer] = useState(1);
@@ -880,8 +887,6 @@ const ScrabbleScorer = () => {
               </div>
             </div>
           </div>
-        )}
-        </div>
         )}
       </div>
     </div>
