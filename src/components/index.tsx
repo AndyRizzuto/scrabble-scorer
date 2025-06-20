@@ -9,5 +9,3 @@ export { GameStats } from './GameStats';
 
 // Export the refactored main component
 export { default as ScrabbleScorer } from './ScrabbleScorer';
-
-// hi
