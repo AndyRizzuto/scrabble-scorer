@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Users, Check, X, RotateCcw, BarChart3, Undo, Download, TrendingUp } from 'lucide-react';
 import { ScoreDisplay } from './ScoreDisplay';
 import { SetupModal } from './SetupModal';
