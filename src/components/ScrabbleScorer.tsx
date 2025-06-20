@@ -76,7 +76,7 @@ const ScrabbleScorer = () => {
     }, 0);
   };
 
-  const calculateBonusPoints = (basePoints: number) => {
+  const calculateBonusPoints = () => {
     let totalWithLetterBonuses = 0;
     const letters = word.toUpperCase().split('');
     
@@ -126,7 +126,7 @@ const ScrabbleScorer = () => {
     if (!word.trim()) return;
     
     const basePoints = calculateWordValue(word);
-    const bonusPoints = calculateBonusPoints(basePoints);
+    const bonusPoints = calculateBonusPoints();
     const finalPoints = parseInt(points) || bonusPoints;
     
     const newWord: WordEntry = {
@@ -349,7 +349,7 @@ const ScrabbleScorer = () => {
   };
 
   const suggestedPoints = word ? calculateWordValue(word) : 0;
-  const bonusCalculatedPoints = suggestedPoints ? calculateBonusPoints(suggestedPoints) : 0;
+  const bonusCalculatedPoints = suggestedPoints ? calculateBonusPoints() : 0;
 
   return (
     <div className="max-w-2xl mx-auto p-3 sm:p-6 bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
