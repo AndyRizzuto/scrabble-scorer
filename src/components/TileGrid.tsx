@@ -1,8 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { RotateCcw } from 'lucide-react';
 import TileInput from './TileInput';
-import { calculateWordValue, calculateBonusPoints, validateWord } from '../utils/scoring';
+import WordMultiplierButton from './WordMultiplierButton';
+import WordShelf from './WordShelf';
+import BingoBadge from './BingoBadge';
+import Confetti from './Confetti';
+import ActionButtons from './ActionButtons';
+import RecentPlays from './RecentPlays';
+import { calculateWordValue, calculateBonusPoints } from '../utils/scoring';
 import { ValidationResult, GameHistoryEntry } from '../types/game';
+import { useWordValidation } from '../hooks/useWordValidation';
 
 interface TileGridProps {
   onAddWord: (word: string, points: number) => void;
@@ -39,13 +45,12 @@ const TileGrid: React.FC<TileGridProps> = ({
   const [letters, setLetters] = useState<string[]>(new Array(7).fill(''));
   const [multipliers, setMultipliers] = useState<number[]>(new Array(7).fill(1));
   const [wordMultiplier, setWordMultiplier] = useState(1);
-  // Bingo bonus is auto-detected when all 7 tiles are used
   const [currentFocus, setCurrentFocus] = useState(0);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [isValidating, setIsValidating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-
   const tileRefs = useRef<HTMLInputElement[]>([]);
+
+  // Use custom hook for validation
+  const { validationResult, isValidating, validateWordAsync, setValidationResult } = useWordValidation(onValidationChange);
 
   // Trigger confetti when bingo is achieved
   useEffect(() => {
@@ -142,22 +147,6 @@ const TileGrid: React.FC<TileGridProps> = ({
     }
   };
 
-  const validateWordAsync = async (word: string) => {
-    if (!word || word.length < 2) return;
-    
-    setIsValidating(true);
-    try {
-      const result = await validateWord(word);
-      setValidationResult(result);
-      if (onValidationChange) {
-        onValidationChange(result);
-      }
-    } catch (error) {
-      console.error('Validation error:', error);
-    }
-    setIsValidating(false);
-  };
-
   const handleMultiplierChange = (index: number) => {
     const newMultipliers = [...multipliers];
     newMultipliers[index] = newMultipliers[index] === 1 ? 2 : newMultipliers[index] === 2 ? 3 : 1;
@@ -219,69 +208,18 @@ const TileGrid: React.FC<TileGridProps> = ({
 
   return (
     <div className="space-y-6 relative">
-      {/* Confetti Animation */}
-      {showConfetti && (
-        <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
-          <div className="text-4xl animate-bounce">🎉🎊✨</div>
-        </div>
-      )}
+      <Confetti show={showConfetti} />
       {/* Compact Controls Row */}
       <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium text-gray-700">Word:</span>
-            <button
-              onClick={() => setWordMultiplier(wordMultiplier === 1 ? 2 : wordMultiplier === 2 ? 3 : 1)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                wordMultiplier === 1 ? 'bg-gray-200 text-gray-700' :
-                wordMultiplier === 2 ? 'bg-red-100 text-red-700 border border-red-300' :
-                'bg-purple-100 text-purple-700 border border-purple-300'
-              }`}
-            >
-              {wordMultiplier}x
-            </button>
+            <WordMultiplierButton wordMultiplier={wordMultiplier} setWordMultiplier={setWordMultiplier} />
           </div>
-          
-          {/* Word Shelf - Current Turn Words */}
-          {currentTurnWords.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {currentTurnWords.map((wordEntry, index) => (
-                <div
-                  key={index}
-                  className="group flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer text-xs"
-                  onClick={() => onWordClick?.(wordEntry.word, wordEntry.definition)}
-                >
-                  <span className="font-mono">{wordEntry.word}</span>
-                  <span className="text-gray-500">+{wordEntry.points}</span>
-                  {onRemoveWord && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveWord(index);
-                      }}
-                      className="ml-1 w-3 h-3 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {usedTiles === 7 && (
-            <div className={`px-3 py-1 rounded-full text-sm font-bold border transition-all duration-300 ${
-              showConfetti 
-                ? 'bg-gradient-to-r from-yellow-200 to-orange-200 text-orange-800 border-orange-300 animate-pulse' 
-                : 'bg-yellow-100 text-yellow-800 border-yellow-300'
-            }`}>
-              🎉 BINGO! +50
-            </div>
-          )}
+          <WordShelf currentTurnWords={currentTurnWords} onWordClick={onWordClick} onRemoveWord={onRemoveWord} />
+          <BingoBadge show={usedTiles === 7} showConfetti={showConfetti} />
         </div>
-
       </div>
-
       {/* Tile Grid */}
       <div className="flex justify-center">
         <div className="grid grid-cols-7 gap-1 sm:gap-2 md:gap-4">
@@ -300,8 +238,6 @@ const TileGrid: React.FC<TileGridProps> = ({
           ))}
         </div>
       </div>
-
-
       {/* Loading indicator for validation */}
       {isValidating && currentWord.length >= 2 && (
         <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-blue-50 text-blue-700">
@@ -309,72 +245,16 @@ const TileGrid: React.FC<TileGridProps> = ({
           <span className="text-sm">Checking word...</span>
         </div>
       )}
-
-
       {/* Split Layout: Action Buttons (25%) | Recent Plays (75%) */}
       <div className="grid grid-cols-4 gap-4">
-        {/* Action Buttons - Left Side */}
-        <div className="space-y-2">
-          <button
-            onClick={handleClear}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 active:bg-gray-400 transition-colors font-medium touch-manipulation text-sm"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>Clear</span>
-          </button>
-          
-          <button
-            onClick={handleAddWord}
-            disabled={!currentWord || isValidating || !validationResult?.valid}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 transition-colors font-medium touch-manipulation text-sm"
-          >
-            {isValidating ? 'Checking...' : 'Add Word'}
-          </button>
-        </div>
-
-        {/* Recent Plays - Right Side with 4 Columns (75% width) */}
-        <div className="col-span-3 bg-gray-50 rounded-lg p-3 border">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-semibold text-gray-700">Recent Plays</h4>
-            {onResetGame && (
-              <button
-                onClick={onResetGame}
-                className="text-xs text-red-600 hover:text-red-800 underline transition-colors"
-                title="Reset game"
-              >
-                reset
-              </button>
-            )}
-          </div>
-          
-          {recentPlays.length === 0 ? (
-            <div className="text-xs text-gray-500 italic text-center py-4">No plays yet</div>
-          ) : (
-            <div className="space-y-1 max-h-24 overflow-y-auto">
-              {/* Header Row */}
-              <div className="grid grid-cols-4 gap-1 text-xs font-medium text-gray-600 border-b border-gray-300 pb-1">
-                <div>Player</div>
-                <div>Word</div>
-                <div>Points</div>
-                <div>Time</div>
-              </div>
-              
-              {/* Data Rows */}
-              {recentPlays.slice(-4).reverse().map((play, index) => (
-                <div key={index} className="grid grid-cols-4 gap-1 text-xs py-0.5">
-                  <div className={`font-medium truncate ${
-                    play.player === 1 ? 'text-blue-600' : 'text-purple-600'
-                  }`}>
-                    {players?.[`player${play.player}`]?.name?.slice(0, 6) || `P${play.player}`}
-                  </div>
-                  <div className="text-gray-700 truncate font-mono">{play.word}</div>
-                  <div className="text-gray-600 font-medium">{play.points}</div>
-                  <div className="text-gray-500 text-xs">{play.time.slice(-8, -3)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ActionButtons
+          onClear={handleClear}
+          onAddWord={handleAddWord}
+          isValidating={isValidating}
+          currentWord={currentWord}
+          validationResult={validationResult}
+        />
+        <RecentPlays recentPlays={recentPlays} players={players} onResetGame={onResetGame} />
       </div>
     </div>
   );
