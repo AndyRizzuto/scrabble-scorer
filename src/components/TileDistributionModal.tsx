@@ -1,12 +1,9 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { LETTER_VALUES } from '../utils/scoring';
 
 interface TileDistributionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  usedTiles: number;
-  remainingTileCounts: Record<string, number>;
 }
 
 // Standard Scrabble tile distribution
@@ -16,17 +13,18 @@ const TILE_DISTRIBUTION = {
   U: 4, V: 2, W: 2, X: 1, Y: 2, Z: 1
 };
 
-const TileDistributionModal: React.FC<TileDistributionModalProps> = ({ isOpen, onClose, usedTiles, remainingTileCounts }) => {
+const TileDistributionModal: React.FC<TileDistributionModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const totalTiles = Object.values(TILE_DISTRIBUTION).reduce((sum, count) => sum + count, 0);
+  const usedTiles = 14; // Assuming each player starts with 7 tiles
   const remainingTiles = totalTiles - usedTiles;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="tile-dist-title">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 id="tile-dist-title" className="text-lg font-bold text-gray-800">Scrabble Tile Distribution</h3>
+          <h3 className="text-lg font-bold text-gray-800">Scrabble Tile Distribution</h3>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -47,27 +45,25 @@ const TileDistributionModal: React.FC<TileDistributionModalProps> = ({ isOpen, o
 
           <div className="grid grid-cols-6 gap-2 text-center">
             {Object.entries(TILE_DISTRIBUTION).map(([letter, originalCount]) => {
-              const remaining = remainingTileCounts[letter] ?? originalCount;
-              const pointValue = LETTER_VALUES[letter as keyof typeof LETTER_VALUES] || 0;
+              // For now, showing original distribution - in a real game you'd track used tiles
+              const remaining = originalCount; // This would be calculated based on actual game state
+              
               return (
                 <div 
                   key={letter}
-                  className={`relative p-2 rounded border flex flex-col items-center justify-center ${
+                  className={`p-2 rounded border ${
                     remaining === 0 ? 'bg-red-50 border-red-200 text-red-400' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <div className="font-bold text-lg">{letter}</div>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-xs">{remaining}</span>
-                    <span className="ml-1 bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 text-xs font-semibold" title="Point value">{pointValue}</span>
-                  </div>
+                  <div className="font-bold">{letter}</div>
+                  <div className="text-xs">{remaining}</div>
                 </div>
               );
             })}
           </div>
 
           <div className="mt-4 text-xs text-gray-500 text-center">
-            This shows the current tile distribution and point values.
+            Tap any letter to see its point value and remaining count
           </div>
         </div>
       </div>
