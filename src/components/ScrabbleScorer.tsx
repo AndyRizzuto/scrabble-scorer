@@ -92,8 +92,18 @@ const ScrabbleScorer: React.FC = () => {
       }
     });
     
+    // Add 2 wins for Andrew (player1) on different days
+    const andrewWins = [];
+    // Andrew's first win - 5 days ago
+    const andrewWin1 = now - (5 * 24 * 60 * 60 * 1000) + (Math.random() * 12 * 60 * 60 * 1000);
+    andrewWins.push(andrewWin1);
+    
+    // Andrew's second win - 12 days ago
+    const andrewWin2 = now - (12 * 24 * 60 * 60 * 1000) + (Math.random() * 12 * 60 * 60 * 1000);
+    andrewWins.push(andrewWin2);
+    
     return {
-      player1: [], // Andrew has no wins
+      player1: andrewWins.sort((a, b) => a - b), // Andrew has 2 wins
       player2: carlaWins.sort((a, b) => a - b) // Sort chronologically
     };
   };
@@ -325,11 +335,19 @@ const ScrabbleScorer: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => setCurrentPage('game')}
+                onClick={() => {
+                  if (hasCurrentGame) {
+                    setCurrentPage('game');
+                  } else {
+                    setShowSetupModal(true);
+                  }
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === 'game' 
-                    ? (hasCurrentGame ? 'bg-blue-600 text-white' : 'bg-green-600 text-white')
-                    : (hasCurrentGame ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-green-100 text-green-700 hover:bg-green-200')
+                    ? 'bg-green-600 text-white'
+                    : hasCurrentGame
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
                 {hasCurrentGame ? 'Game' : 'New Game'}
@@ -342,7 +360,7 @@ const ScrabbleScorer: React.FC = () => {
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                <span style={{fontFamily: 'cursive'}}>Score</span>
+                <span style={{fontFamily: 'cursive', fontWeight: 'bold'}}>Score</span>
               </button>
               <button
                 onClick={() => setCurrentPage('timeline')}
