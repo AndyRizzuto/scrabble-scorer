@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, BarChart3, RotateCcw } from 'lucide-react';
+import { Users, BarChart3, RotateCcw, Edit3, ArrowRightLeft } from 'lucide-react';
 import { 
   Player, 
   SetupData, 
@@ -14,6 +14,7 @@ import ScoreDisplay from './ScoreDisplay';
 import TurnManager from './TurnManager';
 import TileGrid from './TileGrid';
 import MultiWordTurn from './MultiWordTurn';
+import TileDistributionModal from './TileDistributionModal';
 
 const ScrabbleScorer: React.FC = () => {
   // Player and game state
@@ -28,7 +29,6 @@ const ScrabbleScorer: React.FC = () => {
   const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
   const [gameHistory, setGameHistory] = useState<GameHistoryEntry[]>([]);
   const [currentTurnWords, setCurrentTurnWords] = useState<WordEntry[]>([]);
-  const [showMultiWordMode, setShowMultiWordMode] = useState(false);
   
   // Current word/points state for display
   const [currentWord, setCurrentWord] = useState('');
@@ -39,6 +39,10 @@ const ScrabbleScorer: React.FC = () => {
   // UI state
   const [showSetupModal, setShowSetupModal] = useState(true);
   const [currentPage, setCurrentPage] = useState<'game' | 'timeline'>('game');
+  const [selectedWordDefinition, setSelectedWordDefinition] = useState<{word: string; definition?: string} | null>(null);
+  const [restoreToTiles, setRestoreToTiles] = useState<string>('');
+  const [editingScores, setEditingScores] = useState(false);
+  const [showTileModal, setShowTileModal] = useState(false);
 
   // Handlers
   const handleSetupSubmit = (data: SetupData) => {
@@ -56,43 +60,19 @@ const ScrabbleScorer: React.FC = () => {
     }));
   };
 
-  // Simplified handlers for tile-based input
+  // Always add words to current turn (word shelf approach)
   const handleAddWord = (word: string, points: number) => {
-    if (showMultiWordMode) {
-      // Add to current turn
-      const newWord: WordEntry = {
-        word: word.toUpperCase(),
-        basePoints: calculateWordValue(word),
-        bonusPoints: points,
-        finalPoints: points,
-        bonuses: { letterMultiplier: 1, wordMultiplier: 1 }, // TileGrid handles this internally
-        letterMultipliers: [], // TileGrid handles this internally
-        bingoBonus: false, // TileGrid handles this internally
-        tilesUsed: word.length
-      };
-      setCurrentTurnWords(prev => [...prev, newWord]);
-    } else {
-      // Direct score addition
-      const playerKey = `player${currentPlayer}` as const;
-      setPlayers(prev => ({
-        ...prev,
-        [playerKey]: {
-          ...prev[playerKey],
-          score: prev[playerKey].score + points
-        }
-      }));
-      
-      // Add to history
-      setGameHistory(prev => [...prev, {
-        player: currentPlayer,
-        word: word.toUpperCase(),
-        points,
-        time: new Date().toLocaleTimeString()
-      }]);
-      
-      // Switch to next player
-      setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-    }
+    const newWord: WordEntry = {
+      word: word.toUpperCase(),
+      basePoints: calculateWordValue(word),
+      bonusPoints: points,
+      finalPoints: points,
+      bonuses: { letterMultiplier: 1, wordMultiplier: 1 }, // TileGrid handles this internally
+      letterMultipliers: [], // TileGrid handles this internally
+      bingoBonus: false, // TileGrid handles this internally
+      tilesUsed: word.length
+    };
+    setCurrentTurnWords(prev => [...prev, newWord]);
   };
 
   const handleClearTiles = () => {
@@ -101,6 +81,14 @@ const ScrabbleScorer: React.FC = () => {
 
 
   const removeWordFromTurn = (index: number) => {
+    const wordToRestore = currentTurnWords[index];
+    if (wordToRestore) {
+      // Restore the word to tiles
+      setRestoreToTiles(wordToRestore.word);
+      // Clear the restore state after a short delay to allow the effect to trigger
+      setTimeout(() => setRestoreToTiles(''), 100);
+    }
+    // Remove the word from the turn
     setCurrentTurnWords(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -146,31 +134,35 @@ const ScrabbleScorer: React.FC = () => {
 
     // Reset turn
     setCurrentTurnWords([]);
-    setShowMultiWordMode(false);
     
     // Switch to next player
     setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
   };
 
+  const handleWordClick = (word: string, definition?: string) => {
+    setSelectedWordDefinition({ word, definition });
+  };
+
+  const handleToggleEditScores = () => {
+    setEditingScores(!editingScores);
+  };
+
 
   const resetGame = () => {
-    setPlayers({
-      player1: { id: 1, name: 'Andrew', score: 0 },
-      player2: { id: 2, name: 'Carla', score: 0 }
-    });
-    setCurrentPlayer(1);
-    setGameHistory([]);
-    setCurrentTurnWords([]);
-    setShowMultiWordMode(false);
-    setShowSetupModal(true);
+    if (confirm('Are you sure you want to reset the game? This will clear all scores and history.')) {
+      setPlayers({
+        player1: { id: 1, name: 'Andrew', score: 0 },
+        player2: { id: 2, name: 'Carla', score: 0 }
+      });
+      setCurrentPlayer(1);
+      setGameHistory([]);
+      setCurrentTurnWords([]);
+      setShowSetupModal(true);
+    }
   };
 
   const switchTurn = () => {
     setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-  };
-
-  const toggleMultiWordMode = () => {
-    setShowMultiWordMode(!showMultiWordMode);
   };
 
   return (
@@ -214,8 +206,56 @@ const ScrabbleScorer: React.FC = () => {
               </button>
             </div>
           </div>
-          <p className="text-gray-600">Two-player scoring with word validation</p>
+          
+          {/* Header Controls Row */}
+          <div className="flex items-center justify-center gap-4 mb-4">
+            {/* Edit Score Button */}
+            <button
+              onClick={handleToggleEditScores}
+              className={`p-3 rounded-lg transition-colors ${
+                editingScores 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-yellow-600 hover:bg-yellow-700'
+              } text-white`}
+              title={editingScores ? 'Save scores' : 'Edit scores'}
+            >
+              <Edit3 className="w-5 h-5" />
+            </button>
+            
+            {/* Switch Player Button */}
+            <button
+              onClick={switchTurn}
+              disabled={currentTurnWords.length > 0}
+              className="p-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400 transition-colors"
+              title="Switch turn"
+            >
+              <ArrowRightLeft className="w-5 h-5" />
+            </button>
+            
+            {/* Tile Distribution Pill - Double Height */}
+            <button 
+              onClick={() => setShowTileModal(true)}
+              className="text-base text-gray-600 bg-white px-6 py-3 rounded-full border hover:bg-gray-50 transition-colors cursor-pointer h-12 flex items-center"
+              title="View remaining tiles"
+            >
+              📦 {98 - 14 - usedTiles} tiles left
+            </button>
+          </div>
         </div>
+
+        {/* Always Show Score Display */}
+        <ScoreDisplay
+          players={players}
+          currentPlayer={currentPlayer}
+          onScoresUpdate={handleScoresUpdate}
+          currentWord={currentWord}
+          currentPoints={currentPoints}
+          validationResult={validationResult}
+          usedTiles={usedTiles}
+          onSwitchTurn={switchTurn}
+          canSwitchTurn={currentTurnWords.length === 0}
+          editingScores={editingScores}
+        />
 
         {currentPage === 'timeline' ? (
           // Timeline Page (simplified for now - could be extracted to separate component)
@@ -244,26 +284,6 @@ const ScrabbleScorer: React.FC = () => {
         ) : (
           // Game Page
           <div>
-            <ScoreDisplay
-              players={players}
-              currentPlayer={currentPlayer}
-              onScoresUpdate={handleScoresUpdate}
-              currentWord={currentWord}
-              currentPoints={currentPoints}
-              validationResult={validationResult}
-              usedTiles={usedTiles}
-              onSwitchTurn={switchTurn}
-              canSwitchTurn={!(showMultiWordMode && currentTurnWords.length > 0)}
-            />
-
-            {showMultiWordMode && (
-              <MultiWordTurn
-                currentTurnWords={currentTurnWords}
-                onRemoveWord={removeWordFromTurn}
-                getTurnTotal={getTurnTotal}
-              />
-            )}
-
             <TileGrid
               onAddWord={handleAddWord}
               onClear={handleClearTiles}
@@ -273,18 +293,24 @@ const ScrabbleScorer: React.FC = () => {
                 setUsedTiles(tiles || 0);
               }}
               onValidationChange={setValidationResult}
-              onToggleMultiWordMode={toggleMultiWordMode}
-              showMultiWordMode={showMultiWordMode}
               recentPlays={gameHistory}
               players={{
                 player1: { name: players.player1.name },
                 player2: { name: players.player2.name }
               }}
               onResetGame={resetGame}
+              currentTurnWords={currentTurnWords.map(w => ({
+                word: w.word,
+                points: w.finalPoints,
+                definition: validationResult?.definition
+              }))}
+              onRemoveWord={removeWordFromTurn}
+              onWordClick={handleWordClick}
+              restoreToTiles={restoreToTiles}
             />
 
-            {/* Multi-word turn completion */}
-            {showMultiWordMode && currentTurnWords.length > 0 && (
+            {/* Complete Turn Button */}
+            {currentTurnWords.length > 0 && (
               <div className="mt-6">
                 <button
                   onClick={completeTurn}
@@ -299,6 +325,12 @@ const ScrabbleScorer: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Tile Distribution Modal */}
+      <TileDistributionModal 
+        isOpen={showTileModal} 
+        onClose={() => setShowTileModal(false)} 
+      />
     </div>
   );
 };
