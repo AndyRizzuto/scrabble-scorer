@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { RotateCcw, PlusCircle, CheckCircle2, Undo2 } from 'lucide-react';
 import TileInput from './TileInput';
-import RecentPlays from './RecentPlays';
-import { calculateWordValue, calculateBonusPoints, validateWord, LETTER_VALUES } from '../utils/scoring';
-import { ValidationResult, GameHistoryEntry } from '../types/game';
+import RecentPlays from '../score/RecentPlays';
+import { calculateWordValue, calculateBonusPoints, validateWord, LETTER_VALUES } from '../../utils/scoring';
+import { ValidationResult, GameHistoryEntry } from '../../types/game';
 
 interface TileGridProps {
   onAddWord: (word: string, points: number, wordData?: Partial<{

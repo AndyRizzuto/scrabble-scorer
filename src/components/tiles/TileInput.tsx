@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { LETTER_VALUES } from '../utils/scoring';
+import { LETTER_VALUES } from '../../utils/scoring';
 
 interface TileInputProps {
   value: string;

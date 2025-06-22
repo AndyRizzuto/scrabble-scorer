@@ -1,5 +1,5 @@
 import React from 'react';
-import { LETTER_VALUES } from '../utils/scoring';
+import { LETTER_VALUES } from '../../utils/scoring';
 
 interface LetterTilesProps {
   word: string;
