@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { SetupData } from '../types/game';
+import { SetupData } from '../../types/game';
 
 interface GameSetupProps {
   onSetupSubmit: (data: SetupData) => void;
