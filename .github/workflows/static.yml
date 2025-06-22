@@ -39,7 +39,7 @@ jobs:
       
     - name: Clean install (remove node_modules and lockfile)
       run: |
-        rm -rf node_modules package-lock.json
+        rm -rf node_modules
 
     - name: Install dependencies
       run: npm ci
