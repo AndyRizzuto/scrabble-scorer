@@ -89,8 +89,8 @@ const ScrabbleScorer: React.FC = () => {
     const threeWeeksAgo = now - (21 * 24 * 60 * 60 * 1000);
     
     // Generate 10 wins for Carla (player2) across 6 random days in last 3 weeks
-    const carlaWins = [];
-    const daysWithGames = [];
+    const carlaWins: number[] = [];
+    const daysWithGames: number[] = [];
     
     // Pick 6 random days in the last 3 weeks
     for (let i = 0; i < 6; i++) {
@@ -110,7 +110,7 @@ const ScrabbleScorer: React.FC = () => {
     });
     
     // Add 2 wins for Andrew (player1) on different days
-    const andrewWins = [];
+    const andrewWins: number[] = [];
     // Andrew's first win - 5 days ago
     const andrewWin1 = now - (5 * 24 * 60 * 60 * 1000) + (Math.random() * 12 * 60 * 60 * 1000);
     andrewWins.push(andrewWin1);
@@ -118,7 +118,10 @@ const ScrabbleScorer: React.FC = () => {
     // Andrew's second win - 12 days ago
     const andrewWin2 = now - (12 * 24 * 60 * 60 * 1000) + (Math.random() * 12 * 60 * 60 * 1000);
     andrewWins.push(andrewWin2);
-    
+
+    // Use generic player names for test data
+    const player1Name = 'Player 1';
+    const player2Name = 'Player 2';    
     return {
       player1: andrewWins.sort((a, b) => a - b), // Andrew has 2 wins
       player2: carlaWins.sort((a, b) => a - b) // Sort chronologically
