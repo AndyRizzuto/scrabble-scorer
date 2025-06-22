@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { ValidationResult, BonusMultipliers } from '../types/game';
 import { validateWord as validateWordUtil, calculateWordValue, calculateBonusPoints } from '../utils/scoring';
-import LetterTiles from './LetterTiles';
+import LetterTiles from './tiles/LetterTiles';
 
 interface WordInputProps {
   word: string;

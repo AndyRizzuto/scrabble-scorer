@@ -1,7 +1,7 @@
 import React from 'react';
 import { Undo2 } from 'lucide-react';
-import { calculateWordValue, LETTER_VALUES } from '../utils/scoring';
-import { GameHistoryEntry } from '../types/game';
+import { calculateWordValue, LETTER_VALUES } from '../../utils/scoring';
+import { GameHistoryEntry } from '../../types/game';
 
 interface RecentPlaysProps {
   recentPlays: GameHistoryEntry[];

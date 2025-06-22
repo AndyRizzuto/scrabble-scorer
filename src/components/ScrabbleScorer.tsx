@@ -11,21 +11,21 @@ import {
   GameStatus 
 } from '../types/game';
 import { calculateWordValue, calculateBonusPoints } from '../utils/scoring';
-import GameSetup from './GameSetup';
-import ScoreDisplay from './ScoreDisplay';
-import TurnManager from './TurnManager';
-import TileGrid from './TileGrid';
-import MultiWordTurn from './MultiWordTurn';
-import TileDistributionModal from './TileDistributionModal';
-import TurnTimer from './TurnTimer';
-import Timeline from './Timeline';
-import HeaderNav from './HeaderNav';
-import HeaderControls from './HeaderControls';
-import GameCompleteBanner from './GameCompleteBanner';
-import ScoreSheet from './ScoreSheet';
-import LogoWithFallback from './LogoWithFallback';
-import TileBagButton from './TileBagButton';
-import ResponsiveTimer from './ResponsiveTimer';
+import GameSetup from './game/GameSetup';
+import ScoreDisplay from './score/ScoreDisplay';
+import TurnManager from './game/TurnManager';
+import TileGrid from './tiles/TileGrid';
+import MultiWordTurn from './game/MultiWordTurn';
+import TileDistributionModal from './tiles/TileDistributionModal';
+import TurnTimer from './score/TurnTimer';
+import Timeline from './game/Timeline';
+import HeaderNav from './header/HeaderNav';
+import HeaderControls from './header/HeaderControls';
+import GameCompleteBanner from './game/GameCompleteBanner';
+import ScoreSheet from './score/ScoreSheet';
+import LogoWithFallback from './header/LogoWithFallback';
+import TileBagButton from './tiles/TileBagButton';
+import ResponsiveTimer from './score/ResponsiveTimer';
 
 const ScrabbleScorer: React.FC = () => {
   // Game management state

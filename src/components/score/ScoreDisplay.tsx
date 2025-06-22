@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Player, ValidationResult } from '../types/game';
+import { Player, ValidationResult } from '../../types/game';
 
 interface ScoreDisplayProps {
   players: {
