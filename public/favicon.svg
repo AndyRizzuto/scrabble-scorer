@@ -1,0 +1,48 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for tiles -->
+    <linearGradient id="tileGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f5dc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e6ddb8;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="1" dy="1" stdDeviation="1" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" fill="#2c3e50" rx="4"/>
+  
+  <!-- S tile -->
+  <g transform="translate(2, 8)">
+    <rect width="8" height="8" rx="1" ry="1" fill="url(#tileGradient)" stroke="#8b7355" stroke-width="0.5" filter="url(#shadow)"/>
+    <text x="4" y="6" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="#2c3e50">S</text>
+  </g>
+  
+  <!-- K tile -->
+  <g transform="translate(12, 8)">
+    <rect width="8" height="8" rx="1" ry="1" fill="url(#tileGradient)" stroke="#8b7355" stroke-width="0.5" filter="url(#shadow)"/>
+    <text x="4" y="6" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="#2c3e50">K</text>
+  </g>
+  
+  <!-- O tile -->
+  <g transform="translate(22, 8)">
+    <rect width="8" height="8" rx="1" ry="1" fill="url(#tileGradient)" stroke="#8b7355" stroke-width="0.5" filter="url(#shadow)"/>
+    <text x="4" y="6" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="#2c3e50">O</text>
+  </g>
+  
+  <!-- R tile -->
+  <g transform="translate(7, 18)">
+    <rect width="8" height="8" rx="1" ry="1" fill="url(#tileGradient)" stroke="#8b7355" stroke-width="0.5" filter="url(#shadow)"/>
+    <text x="4" y="6" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="#2c3e50">R</text>
+  </g>
+  
+  <!-- E tile -->
+  <g transform="translate(17, 18)">
+    <rect width="8" height="8" rx="1" ry="1" fill="url(#tileGradient)" stroke="#8b7355" stroke-width="0.5" filter="url(#shadow)"/>
+    <text x="4" y="6" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="#2c3e50">E</text>
+  </g>
+</svg>
+

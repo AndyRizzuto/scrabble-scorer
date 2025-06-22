@@ -15,6 +15,7 @@ import TurnManager from './TurnManager';
 import TileGrid from './TileGrid';
 import MultiWordTurn from './MultiWordTurn';
 import TileDistributionModal from './TileDistributionModal';
+import TurnTimer from './TurnTimer';
 
 const ScrabbleScorer: React.FC = () => {
   // Player and game state
@@ -30,6 +31,15 @@ const ScrabbleScorer: React.FC = () => {
   const [gameHistory, setGameHistory] = useState<GameHistoryEntry[]>([]);
   const [currentTurnWords, setCurrentTurnWords] = useState<WordEntry[]>([]);
   
+  // Game wins tracking
+  const [gameWins, setGameWins] = useState<{
+    player1: number[];
+    player2: number[];
+  }>({
+    player1: [],
+    player2: []
+  });
+  
   // Current word/points state for display
   const [currentWord, setCurrentWord] = useState('');
   const [currentPoints, setCurrentPoints] = useState(0);
@@ -43,6 +53,7 @@ const ScrabbleScorer: React.FC = () => {
   const [restoreToTiles, setRestoreToTiles] = useState<string>('');
   const [editingScores, setEditingScores] = useState(false);
   const [showTileModal, setShowTileModal] = useState(false);
+  const [timerActive, setTimerActive] = useState(false);
 
   // Handlers
   const handleSetupSubmit = (data: SetupData) => {
@@ -135,8 +146,9 @@ const ScrabbleScorer: React.FC = () => {
     // Reset turn
     setCurrentTurnWords([]);
     
-    // Switch to next player
+    // Switch to next player and start timer
     setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
+    setTimerActive(true);
   };
 
   const handleWordClick = (word: string, definition?: string) => {
@@ -150,6 +162,20 @@ const ScrabbleScorer: React.FC = () => {
 
   const resetGame = () => {
     if (confirm('Are you sure you want to reset the game? This will clear all scores and history.')) {
+      // Determine winner before resetting
+      if (players.player1.score > 0 || players.player2.score > 0) {
+        const winner = players.player1.score > players.player2.score ? 1 : 
+                      players.player2.score > players.player1.score ? 2 : null;
+        
+        if (winner) {
+          const now = Date.now();
+          setGameWins(prev => ({
+            ...prev,
+            [`player${winner}`]: [...prev[`player${winner}` as keyof typeof prev], now]
+          }));
+        }
+      }
+      
       setPlayers({
         player1: { id: 1, name: 'Andrew', score: 0 },
         player2: { id: 2, name: 'Carla', score: 0 }
@@ -163,6 +189,36 @@ const ScrabbleScorer: React.FC = () => {
 
   const switchTurn = () => {
     setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
+    setTimerActive(true);
+  };
+
+  // Calculate win statistics
+  const getWinStats = (playerKey: 'player1' | 'player2') => {
+    const wins = gameWins[playerKey];
+    const totalWins = wins.length;
+    
+    if (totalWins === 0) return { totalWins: 0, currentStreak: 0, hasFlame: false };
+    
+    // Calculate current streak by looking at most recent wins
+    const otherPlayerKey = playerKey === 'player1' ? 'player2' : 'player1';
+    const allWins = [...gameWins.player1.map(w => ({player: 1, time: w})), 
+                     ...gameWins.player2.map(w => ({player: 2, time: w}))]
+                   .sort((a, b) => b.time - a.time); // Most recent first
+    
+    let currentStreak = 0;
+    const currentPlayer = playerKey === 'player1' ? 1 : 2;
+    
+    for (const win of allWins) {
+      if (win.player === currentPlayer) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+    
+    const hasFlame = currentStreak >= 3;
+    
+    return { totalWins, currentStreak, hasFlame };
   };
 
   return (
@@ -175,10 +231,10 @@ const ScrabbleScorer: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-4 mb-4">
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-              <Users className="text-blue-600" />
-              Scrabble Score Keeper
-            </h1>
+            <div className="flex items-center justify-center">
+              {/* Prominent logo with fallback title */}
+              <LogoWithFallback />
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setCurrentPage('game')}
@@ -240,44 +296,178 @@ const ScrabbleScorer: React.FC = () => {
             >
               📦 {98 - 14 - usedTiles} tiles left
             </button>
+            
+            {/* Turn Timer */}
+            {currentPage === 'game' && (
+              <TurnTimer 
+                isActive={timerActive}
+                onTimerExpired={() => {
+                  // Optional: auto-switch turn when timer expires
+                  console.log('Timer expired for', players[`player${currentPlayer}`].name);
+                }}
+              />
+            )}
           </div>
         </div>
 
-        {/* Always Show Score Display */}
-        <ScoreDisplay
-          players={players}
-          currentPlayer={currentPlayer}
-          onScoresUpdate={handleScoresUpdate}
-          currentWord={currentWord}
-          currentPoints={currentPoints}
-          validationResult={validationResult}
-          usedTiles={usedTiles}
-          onSwitchTurn={switchTurn}
-          canSwitchTurn={currentTurnWords.length === 0}
-          editingScores={editingScores}
-        />
+        {/* Show Score Display only on Game page */}
+        {currentPage === 'game' && (
+          <ScoreDisplay
+            players={players}
+            currentPlayer={currentPlayer}
+            onScoresUpdate={handleScoresUpdate}
+            currentWord={currentWord}
+            currentPoints={currentPoints}
+            validationResult={validationResult}
+            usedTiles={usedTiles}
+            onSwitchTurn={switchTurn}
+            canSwitchTurn={currentTurnWords.length === 0}
+            editingScores={editingScores}
+          />
+        )}
 
         {currentPage === 'timeline' ? (
-          // Timeline Page (simplified for now - could be extracted to separate component)
+          // Timeline Page - Paper Score Sheet Style
           <div>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Game Timeline</h2>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <h3 className="font-semibold text-blue-700">{players.player1.name}</h3>
-                  <div className="text-2xl font-bold text-blue-600">{players.player1.score}</div>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <h3 className="font-semibold text-purple-700">{players.player2.name}</h3>
-                  <div className="text-2xl font-bold text-purple-600">{players.player2.score}</div>
-                </div>
-              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center" style={{fontFamily: 'cursive'}}>Score Sheet</h2>
             </div>
 
-            {gameHistory.length === 0 && (
+            {gameHistory.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p>No games played yet. Start playing to see the timeline!</p>
+                <p>No games played yet. Start playing to see the score sheet!</p>
+              </div>
+            ) : (
+              // Paper-style scoring sheet
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-6 shadow-lg" style={{
+                backgroundImage: `repeating-linear-gradient(
+                  transparent,
+                  transparent 24px,
+                  #e5e7eb 24px,
+                  #e5e7eb 25px
+                )`,
+                minHeight: '400px',
+                fontFamily: 'cursive'
+              }}>
+                {/* Player Name Headers with Win Stats */}
+                <div className="grid grid-cols-2 gap-8 mb-6 pb-4 border-b-2 border-gray-400">
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-blue-700 underline" style={{fontFamily: 'cursive'}}>
+                      {players.player1.name}
+                    </h3>
+                    {(() => {
+                      const stats = getWinStats('player1');
+                      return (
+                        <div className="mt-2 text-lg font-bold text-blue-600" style={{fontFamily: 'cursive'}}>
+                          {stats.totalWins} wins
+                          {stats.currentStreak > 0 && (
+                            <span className="ml-2">
+                              +{stats.currentStreak}
+                              {stats.hasFlame && <span className="ml-1">🔥</span>}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-purple-700 underline" style={{fontFamily: 'cursive'}}>
+                      {players.player2.name}
+                    </h3>
+                    {(() => {
+                      const stats = getWinStats('player2');
+                      return (
+                        <div className="mt-2 text-lg font-bold text-purple-600" style={{fontFamily: 'cursive'}}>
+                          {stats.totalWins} wins
+                          {stats.currentStreak > 0 && (
+                            <span className="ml-2">
+                              +{stats.currentStreak}
+                              {stats.hasFlame && <span className="ml-1">🔥</span>}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Score Entries */}
+                <div className="grid grid-cols-2 gap-8">
+                  {/* Player 1 Column */}
+                  <div className="space-y-2">
+                    {gameHistory.filter(entry => entry.player === 1).map((entry, index) => {
+                      const player1RunningTotal = gameHistory
+                        .filter(e => e.player === 1)
+                        .slice(0, index + 1)
+                        .reduce((sum, e) => sum + e.points, 0);
+                      
+                      return (
+                        <div key={`p1-${index}`} className="flex justify-between items-center text-base" style={{fontFamily: 'cursive'}}>
+                          <div className="font-semibold text-blue-800" style={{fontFamily: 'cursive'}}>
+                            {entry.isTurnSummary ? (
+                              <span className="text-blue-600 font-bold">{entry.points}</span>
+                            ) : (
+                              `${entry.points}`
+                            )}
+                          </div>
+                          <div className="text-gray-700 text-right flex-1 ml-2" style={{fontFamily: 'cursive'}}>
+                            {entry.isTurnSummary ? (
+                              <span className="text-sm italic">{entry.word}</span>
+                            ) : (
+                              entry.word
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Running Total */}
+                    {players.player1.score > 0 && (
+                      <div className="border-t border-blue-300 pt-2 mt-4">
+                        <div className="text-center font-bold text-2xl text-blue-700 bg-blue-50 rounded px-2 py-1" style={{fontFamily: 'cursive'}}>
+                          {players.player1.score}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Player 2 Column */}
+                  <div className="space-y-2">
+                    {gameHistory.filter(entry => entry.player === 2).map((entry, index) => {
+                      const player2RunningTotal = gameHistory
+                        .filter(e => e.player === 2)
+                        .slice(0, index + 1)
+                        .reduce((sum, e) => sum + e.points, 0);
+                      
+                      return (
+                        <div key={`p2-${index}`} className="flex justify-between items-center text-base" style={{fontFamily: 'cursive'}}>
+                          <div className="font-semibold text-purple-800" style={{fontFamily: 'cursive'}}>
+                            {entry.isTurnSummary ? (
+                              <span className="text-purple-600 font-bold">{entry.points}</span>
+                            ) : (
+                              `${entry.points}`
+                            )}
+                          </div>
+                          <div className="text-gray-700 text-right flex-1 ml-2" style={{fontFamily: 'cursive'}}>
+                            {entry.isTurnSummary ? (
+                              <span className="text-sm italic">{entry.word}</span>
+                            ) : (
+                              entry.word
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Running Total */}
+                    {players.player2.score > 0 && (
+                      <div className="border-t border-purple-300 pt-2 mt-4">
+                        <div className="text-center font-bold text-2xl text-purple-700 bg-purple-50 rounded px-2 py-1" style={{fontFamily: 'cursive'}}>
+                          {players.player2.score}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -307,6 +497,7 @@ const ScrabbleScorer: React.FC = () => {
               onRemoveWord={removeWordFromTurn}
               onWordClick={handleWordClick}
               restoreToTiles={restoreToTiles}
+              onCompleteTurn={completeTurn}
             />
 
             {/* Complete Turn Button */}
@@ -332,6 +523,23 @@ const ScrabbleScorer: React.FC = () => {
         onClose={() => setShowTileModal(false)} 
       />
     </div>
+  );
+};
+
+// Prominent logo with fallback title if image fails to load
+const LogoWithFallback: React.FC = () => {
+  const [showFallback, setShowFallback] = React.useState(false);
+  return showFallback ? (
+    <span className="text-4xl font-extrabold tracking-tight text-blue-700 drop-shadow-lg">SKORE</span>
+  ) : (
+    <img
+      src="/logo.svg"
+      alt="SKORE"
+      className="h-24 w-auto max-w-xs mx-auto drop-shadow-xl"
+      style={{ minHeight: 64 }}
+      onError={() => setShowFallback(true)}
+      draggable={false}
+    />
   );
 };
 
