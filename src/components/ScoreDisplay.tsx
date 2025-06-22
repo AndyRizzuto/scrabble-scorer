@@ -55,36 +55,36 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     <div className="mb-6 flex items-center gap-4">
       {/* Compact Score Display with Current Word to the Right */}
       <div className="flex items-center gap-4 flex-1">
-        {/* Narrower Score Boxes */}
+        {/* Player Score Boxes - Same Size as Letter Tiles */}
         <div className="flex gap-3">
-          <div className={`text-center p-3 rounded-lg transition-all min-w-0 ${
-            currentPlayer === 1 ? 'bg-blue-100 border-2 border-blue-400' : 'bg-gray-50'
+          <div className={`flex flex-col items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg transition-all border-2 ${
+            currentPlayer === 1 ? 'bg-blue-100 border-blue-400' : 'bg-gray-50 border-gray-300'
           }`}>
-            <h2 className="text-sm font-semibold text-gray-700 truncate">{players.player1.name}</h2>
+            <h2 className="text-xs font-semibold text-gray-700 truncate leading-tight">{players.player1.name}</h2>
             {editingScores ? (
               <input
                 type="number"
                 value={tempScores.player1}
                 onChange={(e) => setTempScores(prev => ({ ...prev, player1: parseInt(e.target.value) || 0 }))}
-                className="text-2xl font-bold text-blue-600 bg-transparent border-b-2 border-blue-300 text-center w-16 mx-auto"
+                className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600 bg-transparent text-center w-full border-none outline-none"
               />
             ) : (
-              <div className="text-2xl font-bold text-blue-600">{players.player1.score}</div>
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600">{players.player1.score}</div>
             )}
           </div>
-          <div className={`text-center p-3 rounded-lg transition-all min-w-0 ${
-            currentPlayer === 2 ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50'
+          <div className={`flex flex-col items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg transition-all border-2 ${
+            currentPlayer === 2 ? 'bg-purple-100 border-purple-400' : 'bg-gray-50 border-gray-300'
           }`}>
-            <h2 className="text-sm font-semibold text-gray-700 truncate">{players.player2.name}</h2>
+            <h2 className="text-xs font-semibold text-gray-700 truncate leading-tight">{players.player2.name}</h2>
             {editingScores ? (
               <input
                 type="number"
                 value={tempScores.player2}
                 onChange={(e) => setTempScores(prev => ({ ...prev, player2: parseInt(e.target.value) || 0 }))}
-                className="text-2xl font-bold text-purple-600 bg-transparent border-b-2 border-purple-300 text-center w-16 mx-auto"
+                className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600 bg-transparent text-center w-full border-none outline-none"
               />
             ) : (
-              <div className="text-2xl font-bold text-purple-600">{players.player2.score}</div>
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600">{players.player2.score}</div>
             )}
           </div>
         </div>
@@ -99,24 +99,26 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
             {currentWord && currentPoints !== undefined ? (
               <>
                 <div className="flex items-center justify-between mb-1">
-                  <div className="text-sm font-bold">{currentWord}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-bold">{currentWord}</div>
+                    {/* Speaker Icon immediately after word */}
+                    {validationResult?.pronunciation && (
+                      <button
+                        onClick={() => {
+                          if ('speechSynthesis' in window) {
+                            const utterance = new SpeechSynthesisUtterance(currentWord);
+                            utterance.rate = 0.8;
+                            speechSynthesis.speak(utterance);
+                          }
+                        }}
+                        className="p-1 rounded-full hover:bg-white/50 transition-colors"
+                        title="Pronounce word"
+                      >
+                        🔊
+                      </button>
+                    )}
+                  </div>
                   <div className="font-bold text-lg">{currentPoints} points</div>
-                  {/* Speaker Icon */}
-                  {validationResult?.pronunciation && (
-                    <button
-                      onClick={() => {
-                        if ('speechSynthesis' in window) {
-                          const utterance = new SpeechSynthesisUtterance(currentWord);
-                          utterance.rate = 0.8;
-                          speechSynthesis.speak(utterance);
-                        }
-                      }}
-                      className="ml-2 p-1 rounded-full hover:bg-white/50 transition-colors"
-                      title="Pronounce word"
-                    >
-                      🔊
-                    </button>
-                  )}
                 </div>
                 
                 {validationResult && (

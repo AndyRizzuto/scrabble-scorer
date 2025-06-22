@@ -19,6 +19,7 @@ interface TileGridProps {
   onRemoveWord?: (index: number) => void;
   onWordClick?: (word: string, definition?: string) => void;
   restoreToTiles?: string;
+  onCompleteTurn?: () => void;
 }
 
 const TileGrid: React.FC<TileGridProps> = ({ 
@@ -32,7 +33,8 @@ const TileGrid: React.FC<TileGridProps> = ({
   currentTurnWords = [],
   onRemoveWord,
   onWordClick,
-  restoreToTiles
+  restoreToTiles,
+  onCompleteTurn
 }) => {
   const [letters, setLetters] = useState<string[]>(new Array(7).fill(''));
   const [multipliers, setMultipliers] = useState<number[]>(new Array(7).fill(1));
@@ -95,6 +97,38 @@ const TileGrid: React.FC<TileGridProps> = ({
     }
   }, [restoreToTiles]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when not typing in inputs
+      if (e.target instanceof HTMLInputElement) return;
+      
+      if (e.key === 'Enter') {
+        if (e.metaKey || e.ctrlKey) {
+          // Command+Return (Mac) or Ctrl+Return (Windows/Linux) = Complete Turn
+          e.preventDefault();
+          if (onCompleteTurn && currentTurnWords.length > 0) {
+            onCompleteTurn();
+          }
+        } else {
+          // Return = Add Word
+          e.preventDefault();
+          const word = letters.join('').trim();
+          const points = calculateCurrentPoints();
+          if (word && points > 0 && validationResult?.valid) {
+            handleAddWord();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [letters, multipliers, wordMultiplier, validationResult?.valid, currentTurnWords, onCompleteTurn, onAddWord]);
+
   const handleLetterChange = (index: number, letter: string) => {
     const newLetters = [...letters];
     newLetters[index] = letter;
@@ -156,18 +190,6 @@ const TileGrid: React.FC<TileGridProps> = ({
     return calculateBonusPoints(word, multipliers, wordMultiplier, isBingo);
   };
 
-
-  const handleAddWord = () => {
-    const word = getCurrentWord();
-    const points = calculateCurrentPoints();
-    
-    // Only allow adding valid words
-    if (word && points > 0 && validationResult?.valid) {
-      onAddWord(word, points);
-      handleClear();
-    }
-  };
-
   const handleClear = () => {
     setLetters(new Array(7).fill(''));
     setMultipliers(new Array(7).fill(1));
@@ -178,6 +200,17 @@ const TileGrid: React.FC<TileGridProps> = ({
       onValidationChange(null);
     }
     onClear();
+  };
+
+  const handleAddWord = () => {
+    const word = getCurrentWord();
+    const points = calculateCurrentPoints();
+    
+    // Only allow adding valid words
+    if (word && points > 0 && validationResult?.valid) {
+      onAddWord(word, points);
+      handleClear();
+    }
   };
 
   const currentWord = getCurrentWord();
