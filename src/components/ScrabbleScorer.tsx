@@ -11,7 +11,7 @@ import { calculateWordValue, calculateBonusPoints } from '../utils/scoring';
 import GameSetup from './GameSetup';
 import ScoreDisplay from './ScoreDisplay';
 import TurnManager from './TurnManager';
-import WordInput from './WordInput';
+import TileGrid from './TileGrid';
 import MultiWordTurn from './MultiWordTurn';
 
 const ScrabbleScorer: React.FC = () => {
@@ -29,16 +29,8 @@ const ScrabbleScorer: React.FC = () => {
   const [currentTurnWords, setCurrentTurnWords] = useState<WordEntry[]>([]);
   const [showMultiWordMode, setShowMultiWordMode] = useState(false);
   
-  // Word input state
-  const [word, setWord] = useState('');
-  const [points, setPoints] = useState('');
-  const [letterMultipliers, setLetterMultipliers] = useState<number[]>([]);
-  const [bonusMultipliers, setBonusMultipliers] = useState<BonusMultipliers>({
-    letterMultiplier: 1,
-    wordMultiplier: 1
-  });
-  const [tilesUsed, setTilesUsed] = useState(0);
-  const [bingoBonus, setBingoBonus] = useState(false);
+  // Simplified state for tile-based input
+  // All word input logic is now handled by TileGrid component
   
   // UI state
   const [showSetupModal, setShowSetupModal] = useState(true);
@@ -60,63 +52,49 @@ const ScrabbleScorer: React.FC = () => {
     }));
   };
 
-  const updateWordAndTiles = (newWord: string) => {
-    setWord(newWord);
-    const wordLength = newWord.length;
-    setTilesUsed(wordLength);
-    setBingoBonus(wordLength === 7);
-    
-    // Adjust letter multipliers array to match word length
-    setLetterMultipliers(prev => {
-      const newMultipliers = [...prev];
-      while (newMultipliers.length < wordLength) {
-        newMultipliers.push(1);
-      }
-      return newMultipliers.slice(0, wordLength);
-    });
+  // Simplified handlers for tile-based input
+  const handleAddWord = (word: string, points: number) => {
+    if (showMultiWordMode) {
+      // Add to current turn
+      const newWord: WordEntry = {
+        word: word.toUpperCase(),
+        basePoints: calculateWordValue(word),
+        bonusPoints: points,
+        finalPoints: points,
+        bonuses: { letterMultiplier: 1, wordMultiplier: 1 }, // TileGrid handles this internally
+        letterMultipliers: [], // TileGrid handles this internally
+        bingoBonus: false, // TileGrid handles this internally
+        tilesUsed: word.length
+      };
+      setCurrentTurnWords(prev => [...prev, newWord]);
+    } else {
+      // Direct score addition
+      const playerKey = `player${currentPlayer}` as const;
+      setPlayers(prev => ({
+        ...prev,
+        [playerKey]: {
+          ...prev[playerKey],
+          score: prev[playerKey].score + points
+        }
+      }));
+      
+      // Add to history
+      setGameHistory(prev => [...prev, {
+        player: currentPlayer,
+        word: word.toUpperCase(),
+        points,
+        time: new Date().toLocaleTimeString()
+      }]);
+      
+      // Switch to next player
+      setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
+    }
   };
 
-  const cycleLetterMultiplier = (index: number) => {
-    setLetterMultipliers(prev => {
-      const newMultipliers = [...prev];
-      const current = newMultipliers[index] || 1;
-      newMultipliers[index] = current === 1 ? 2 : current === 2 ? 3 : 1;
-      return newMultipliers;
-    });
+  const handleClearTiles = () => {
+    // TileGrid handles its own clearing
   };
 
-  const resetBonuses = () => {
-    setBonusMultipliers({ letterMultiplier: 1, wordMultiplier: 1 });
-    setBingoBonus(false);
-    setTilesUsed(0);
-    setLetterMultipliers([]);
-  };
-
-  const addWordToTurn = () => {
-    if (!word.trim()) return;
-    
-    const basePoints = calculateWordValue(word);
-    const bonusPoints = calculateBonusPoints(word, letterMultipliers, bonusMultipliers.wordMultiplier, bingoBonus);
-    const finalPoints = parseInt(points) || bonusPoints;
-    
-    const newWord: WordEntry = {
-      word: word.toUpperCase(),
-      basePoints,
-      bonusPoints,
-      finalPoints,
-      bonuses: { ...bonusMultipliers },
-      letterMultipliers: [...letterMultipliers],
-      bingoBonus,
-      tilesUsed
-    };
-    
-    setCurrentTurnWords(prev => [...prev, newWord]);
-    
-    // Reset form for next word
-    setWord('');
-    setPoints('');
-    resetBonuses();
-  };
 
   const removeWordFromTurn = (index: number) => {
     setCurrentTurnWords(prev => prev.filter((_, i) => i !== index));
@@ -170,39 +148,6 @@ const ScrabbleScorer: React.FC = () => {
     setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
   };
 
-  const addScore = () => {
-    if (showMultiWordMode) {
-      addWordToTurn();
-    } else {
-      // Original single word logic
-      const pointsToAdd = parseInt(points) || 0;
-      const playerKey = `player${currentPlayer}` as const;
-      
-      setPlayers(prev => ({
-        ...prev,
-        [playerKey]: {
-          ...prev[playerKey],
-          score: prev[playerKey].score + pointsToAdd
-        }
-      }));
-
-      // Add to history
-      setGameHistory(prev => [...prev, {
-        player: currentPlayer,
-        word: word.toUpperCase(),
-        points: pointsToAdd,
-        time: new Date().toLocaleTimeString()
-      }]);
-
-      // Reset form
-      setWord('');
-      setPoints('');
-      resetBonuses();
-      
-      // Switch to next player
-      setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-    }
-  };
 
   const resetGame = () => {
     setPlayers({
@@ -210,13 +155,10 @@ const ScrabbleScorer: React.FC = () => {
       player2: { id: 2, name: 'Carla', score: 0 }
     });
     setCurrentPlayer(1);
-    setWord('');
-    setPoints('');
     setGameHistory([]);
     setCurrentTurnWords([]);
     setShowMultiWordMode(false);
     setShowSetupModal(true);
-    resetBonuses();
   };
 
   const switchTurn = () => {
@@ -321,54 +263,31 @@ const ScrabbleScorer: React.FC = () => {
               />
             )}
 
-            <WordInput
-              word={word}
-              points={points}
-              letterMultipliers={letterMultipliers}
-              bonusMultipliers={bonusMultipliers}
-              bingoBonus={bingoBonus}
-              tilesUsed={tilesUsed}
-              onWordChange={updateWordAndTiles}
-              onPointsChange={setPoints}
-              onLetterMultiplierChange={cycleLetterMultiplier}
-              onBonusMultiplierChange={setBonusMultipliers}
-              onResetBonuses={resetBonuses}
+            <TileGrid
+              onAddWord={handleAddWord}
+              onClear={handleClearTiles}
             />
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 mb-8">
-              {showMultiWordMode ? (
-                <>
-                  <button
-                    onClick={addScore}
-                    disabled={!word.trim()}
-                    className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 font-medium transition-colors"
-                  >
-                    Add Word to Turn
-                  </button>
-                  <button
-                    onClick={completeTurn}
-                    disabled={currentTurnWords.length === 0}
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-medium transition-colors"
-                  >
-                    Complete Turn ({getTurnTotal()})
-                  </button>
-                </>
-              ) : (
+            {/* Multi-word turn completion */}
+            {showMultiWordMode && currentTurnWords.length > 0 && (
+              <div className="mt-6">
                 <button
-                  onClick={addScore}
-                  disabled={!points && points !== '0'}
-                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-medium transition-colors"
+                  onClick={completeTurn}
+                  className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-lg"
                 >
-                  Add Score
+                  Complete Turn ({getTurnTotal()} points)
                 </button>
-              )}
+              </div>
+            )}
+
+            {/* Reset Game Button */}
+            <div className="mt-6">
               <button
                 onClick={resetGame}
-                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors flex items-center gap-2"
+                className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-4 h-4" />
-                Reset
+                Reset Game
               </button>
             </div>
 
