@@ -30,7 +30,14 @@ export const calculateBonusPoints = (
   return Math.round(finalPoints) + bingoAddition;
 };
 
-export const validateWord = async (word: string): Promise<{ valid: boolean; word: string; definition?: string }> => {
+export const validateWord = async (word: string): Promise<{ 
+  valid: boolean; 
+  word: string; 
+  definition?: string;
+  pronunciation?: string;
+  partOfSpeech?: string;
+  origin?: string;
+}> => {
   if (!word.trim()) {
     return { valid: false, word: word.toUpperCase() };
   }
@@ -43,18 +50,21 @@ export const validateWord = async (word: string): Promise<{ valid: boolean; word
       const data = await response.json();
       const entry = data[0];
       
-      // Extract first definition
+      // Extract detailed information
       const firstMeaning = entry?.meanings?.[0];
       const firstDefinition = firstMeaning?.definitions?.[0];
       const partOfSpeech = firstMeaning?.partOfSpeech || '';
       const definition = firstDefinition?.definition || '';
-      
-      const formattedDefinition = partOfSpeech ? `(${partOfSpeech}) ${definition}` : definition;
+      const pronunciation = entry?.phonetics?.[0]?.text || entry?.phonetic || '';
+      const origin = entry?.origin || '';
       
       return {
         valid: true,
         word: word.toUpperCase(),
-        definition: formattedDefinition
+        definition,
+        pronunciation,
+        partOfSpeech,
+        origin
       };
     } else {
       // Fallback: basic validation for words not in dictionary
