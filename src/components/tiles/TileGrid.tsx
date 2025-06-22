@@ -251,6 +251,19 @@ const TileGrid: React.FC<TileGridProps> = ({
     }
   };
 
+  // Handler for Complete Turn button
+  const handleCompleteTurn = () => {
+    if (currentWord && validationResult?.valid) {
+      handleAddWord();
+      setTimeout(() => {
+        if (onCompleteTurn) onCompleteTurn();
+      }, 0);
+    } else if (!currentWord && currentTurnWords.length > 0) {
+      if (onCompleteTurn) onCompleteTurn();
+    }
+    // If input is not empty and not valid, do nothing (button should be disabled)
+  };
+
   const currentWord = getCurrentWord();
   const currentPoints = calculateCurrentPoints();
   const usedTiles = letters.filter(l => l !== '').length;
@@ -377,24 +390,18 @@ const TileGrid: React.FC<TileGridProps> = ({
           
           <button
             type="button"
-            onClick={() => {
-              // If current word is valid, add it to the turn first
-              if (currentWord && validationResult?.valid) {
-                handleAddWord();
-                setTimeout(() => {
-                  if (onCompleteTurn) onCompleteTurn();
-                }, 0);
-              } else if (!currentWord && currentTurnWords.length > 0) {
-                // If no word in input, just complete the turn
-                if (onCompleteTurn) onCompleteTurn();
-              }
-            }}
+            onClick={handleCompleteTurn}
             disabled={
               (currentWord && !validationResult?.valid) ||
               isValidating ||
               (!currentWord && currentTurnWords.length === 0)
             }
             className="w-full flex flex-col items-center justify-center px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 transition-colors font-medium touch-manipulation text-sm"
+            title={
+              (currentWord && !validationResult?.valid)
+                ? 'Enter a valid word or clear the input to complete the turn.'
+                : undefined
+            }
           >
             <span>Complete Turn</span>
             <span className="text-xs">{(currentWord && validationResult?.valid ? calculateCurrentPoints() : 0) + currentTurnWords.reduce((sum, word) => sum + word.points, 0)} points</span>
