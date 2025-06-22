@@ -30,25 +30,48 @@ export const calculateBonusPoints = (
   return Math.round(finalPoints) + bingoAddition;
 };
 
-export const validateWord = async (word: string): Promise<{ valid: boolean; word: string }> => {
+export const validateWord = async (word: string): Promise<{ valid: boolean; word: string; definition?: string }> => {
   if (!word.trim()) {
     return { valid: false, word: word.toUpperCase() };
   }
   
   try {
-    // Using basic validation for now - in a real app you'd use a dictionary API
-    const isValid = /^[a-zA-Z]+$/.test(word) && word.length >= 2;
+    // Try to get definition from Free Dictionary API
+    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
     
-    return {
-      valid: isValid,
-      word: word.toUpperCase()
-    };
+    if (response.ok) {
+      const data = await response.json();
+      const entry = data[0];
+      
+      // Extract first definition
+      const firstMeaning = entry?.meanings?.[0];
+      const firstDefinition = firstMeaning?.definitions?.[0];
+      const partOfSpeech = firstMeaning?.partOfSpeech || '';
+      const definition = firstDefinition?.definition || '';
+      
+      const formattedDefinition = partOfSpeech ? `(${partOfSpeech}) ${definition}` : definition;
+      
+      return {
+        valid: true,
+        word: word.toUpperCase(),
+        definition: formattedDefinition
+      };
+    } else {
+      // Fallback: basic validation for words not in dictionary
+      const isValid = /^[a-zA-Z]+$/.test(word) && word.length >= 2;
+      return {
+        valid: isValid,
+        word: word.toUpperCase(),
+        definition: isValid ? 'Valid word (no definition available)' : undefined
+      };
+    }
   } catch (error) {
-    // Fallback validation
+    // Fallback validation if API fails
     const isValid = /^[a-zA-Z]+$/.test(word) && word.length >= 2;
     return {
       valid: isValid,
-      word: word.toUpperCase()
+      word: word.toUpperCase(),
+      definition: isValid ? 'Valid word (offline mode)' : undefined
     };
   }
 };

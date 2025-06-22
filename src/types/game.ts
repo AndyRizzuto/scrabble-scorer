@@ -43,6 +43,7 @@ export interface GameState {
 export interface ValidationResult {
   valid: boolean;
   word: string;
+  definition?: string;
 }
 
 export interface SetupData {
