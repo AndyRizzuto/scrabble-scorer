@@ -105,7 +105,7 @@ const TileInput: React.FC<TileInputProps> = ({
       {/* Multiplier Button */}
       <button
         onClick={() => onMultiplierChange(index)}
-        className={`px-3 py-1 text-sm font-medium rounded-full border transition-colors ${getMultiplierColor()}`}
+        className={`px-4 py-2 text-base font-medium rounded-full border transition-colors min-w-[48px] min-h-[40px] touch-manipulation ${getMultiplierColor()}`}
       >
         {getMultiplierText()}
       </button>

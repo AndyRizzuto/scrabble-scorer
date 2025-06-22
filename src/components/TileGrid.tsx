@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, PlusCircle, CheckCircle2 } from 'lucide-react';
 import TileInput from './TileInput';
 import { calculateWordValue, calculateBonusPoints, validateWord } from '../utils/scoring';
 import { ValidationResult, GameHistoryEntry } from '../types/game';
@@ -232,7 +232,7 @@ const TileGrid: React.FC<TileGridProps> = ({
             <span className="text-sm font-medium text-gray-700">Word:</span>
             <button
               onClick={() => setWordMultiplier(wordMultiplier === 1 ? 2 : wordMultiplier === 2 ? 3 : 1)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-full text-base font-medium transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center touch-manipulation ${
                 wordMultiplier === 1 ? 'bg-gray-200 text-gray-700' :
                 wordMultiplier === 2 ? 'bg-red-100 text-red-700 border border-red-300' :
                 'bg-purple-100 text-purple-700 border border-purple-300'
@@ -280,6 +280,17 @@ const TileGrid: React.FC<TileGridProps> = ({
           )}
         </div>
 
+        {/* Add Word Button */}
+        <button
+          type="button"
+          onClick={handleAddWord}
+          disabled={!currentWord || isValidating || !validationResult?.valid}
+          className="ml-2 flex items-center gap-2 px-3 py-1 text-green-600 hover:text-green-800 transition-colors disabled:text-gray-400 font-medium"
+          title="Add Word"
+        >
+          <span>Add Word</span>
+          <PlusCircle className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Tile Grid */}
@@ -324,11 +335,12 @@ const TileGrid: React.FC<TileGridProps> = ({
           </button>
           
           <button
-            onClick={handleAddWord}
-            disabled={!currentWord || isValidating || !validationResult?.valid}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 transition-colors font-medium touch-manipulation text-sm"
+            onClick={onCompleteTurn}
+            disabled={currentTurnWords.length === 0}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 transition-colors font-semibold touch-manipulation text-base"
           >
-            {isValidating ? 'Checking...' : 'Add Word'}
+            <CheckCircle2 className="w-5 h-5" />
+            Submit Turn
           </button>
         </div>
 
