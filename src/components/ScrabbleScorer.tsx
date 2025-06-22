@@ -18,8 +18,7 @@ import TileGrid from './TileGrid';
 import MultiWordTurn from './MultiWordTurn';
 import TileDistributionModal from './TileDistributionModal';
 import TurnTimer from './TurnTimer';
-import GamePage from './GamePage';
-import TimelinePage from './TimelinePage';
+import Timeline from './Timeline';
 
 const ResponsiveTimer: React.FC<{ 
   isActive: boolean; 
@@ -787,39 +786,275 @@ const ScrabbleScorer: React.FC = () => {
         )}
 
         {currentPage === 'timeline' ? (
-          <TimelinePage
+          <Timeline 
             players={players}
             gameHistory={gameHistory}
-            getWinStats={getWinStats}
+            gameWins={gameWins}
+            games={games}
+            onCreateGame={handleCreateGame}
+            onGameClick={handleGameClick}
+            formatDuration={formatDuration}
+            getGameDuration={getGameDurationForTimeline}
           />
+        ) : currentPage === 'score' ? (
+          // Timeline Page - Paper Score Sheet Style
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center" style={{fontFamily: 'cursive'}}>Score Sheet</h2>
+            </div>
+
+            {gameHistory.length === 0 ? (
+              // Show empty score sheet with today's date
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-6 shadow-lg" style={{
+                backgroundImage: `repeating-linear-gradient(
+                  transparent,
+                  transparent 24px,
+                  #e5e7eb 24px,
+                  #e5e7eb 25px
+                )`,
+                minHeight: '400px',
+                fontFamily: 'cursive'
+              }}>
+                {/* Date Header */}
+                <div className="text-center mb-6 pb-4 border-b-2 border-gray-400">
+                  <div className="text-lg font-bold text-gray-600" style={{fontFamily: 'cursive'}}>
+                    {new Date().toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </div>
+                </div>
+
+                {/* Player Name Headers */}
+                <div className="grid grid-cols-2 gap-8 mb-6 pb-4 border-b-2 border-gray-400">
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-blue-700 underline" style={{fontFamily: 'cursive'}}>
+                      {players.player1.name}
+                    </h3>
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-purple-700 underline" style={{fontFamily: 'cursive'}}>
+                      {players.player2.name}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Empty scores with 0's */}
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="text-center">
+                    <div className="text-center font-bold text-2xl text-blue-700 bg-blue-50 rounded px-2 py-1" style={{fontFamily: 'cursive'}}>
+                      0
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-center font-bold text-2xl text-purple-700 bg-purple-50 rounded px-2 py-1" style={{fontFamily: 'cursive'}}>
+                      0
+                    </div>
+                  </div>
+                </div>
+
+                {/* Message */}
+                <div className="text-center mt-8 text-gray-500" style={{fontFamily: 'cursive'}}>
+                  <p className="text-lg">Ready to start a new game!</p>
+                  <p className="text-sm mt-2">Click "New Game" to begin scoring</p>
+                </div>
+              </div>
+            ) : (
+              // Paper-style scoring sheet
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-6 shadow-lg" style={{
+                backgroundImage: `repeating-linear-gradient(
+                  transparent,
+                  transparent 24px,
+                  #e5e7eb 24px,
+                  #e5e7eb 25px
+                )`,
+                minHeight: '400px',
+                fontFamily: 'cursive'
+              }}>
+                {/* Player Name Headers with Win Stats */}
+                <div className="grid grid-cols-2 gap-8 mb-6 pb-4 border-b-2 border-gray-400">
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-blue-700 underline" style={{fontFamily: 'cursive'}}>
+                      {players.player1.name}
+                    </h3>
+                    {(() => {
+                      const stats = getWinStats('player1');
+                      return (
+                        <div className="mt-2 text-lg font-bold text-blue-600" style={{fontFamily: 'cursive'}}>
+                          {stats.totalWins} wins
+                          {stats.currentStreak > 0 && (
+                            <span className="ml-2">
+                              +{stats.currentStreak}
+                              {stats.hasFlame && <span className="ml-1">🔥</span>}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-purple-700 underline" style={{fontFamily: 'cursive'}}>
+                      {players.player2.name}
+                    </h3>
+                    {(() => {
+                      const stats = getWinStats('player2');
+                      return (
+                        <div className="mt-2 text-lg font-bold text-purple-600" style={{fontFamily: 'cursive'}}>
+                          {stats.totalWins} wins
+                          {stats.currentStreak > 0 && (
+                            <span className="ml-2">
+                              +{stats.currentStreak}
+                              {stats.hasFlame && <span className="ml-1">🔥</span>}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Score Entries */}
+                <div className="grid grid-cols-2 gap-8">
+                  {/* Player 1 Column */}
+                  <div className="space-y-2">
+                    {gameHistory.filter(entry => entry.player === 1).map((entry, index) => {
+                      const player1RunningTotal = gameHistory
+                        .filter(e => e.player === 1)
+                        .slice(0, index + 1)
+                        .reduce((sum, e) => sum + e.points, 0);
+                      
+                      return (
+                        <div key={`p1-${index}`} className="flex justify-between items-center text-base" style={{fontFamily: 'cursive'}}>
+                          <div className="font-semibold text-blue-800" style={{fontFamily: 'cursive'}}>
+                            {entry.isTurnSummary ? (
+                              <span className="text-blue-600 font-bold">{entry.points}</span>
+                            ) : (
+                              `${entry.points}`
+                            )}
+                          </div>
+                          <div className="text-gray-700 text-right flex-1 ml-2" style={{fontFamily: 'cursive'}}>
+                            {entry.isTurnSummary ? (
+                              <span className="text-sm italic">{entry.word}</span>
+                            ) : (
+                              entry.word
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Running Total */}
+                    {players.player1.score > 0 && (
+                      <div className="border-t border-blue-300 pt-2 mt-4">
+                        <div className="text-center font-bold text-2xl text-blue-700 bg-blue-50 rounded px-2 py-1" style={{fontFamily: 'cursive'}}>
+                          {players.player1.score}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Player 2 Column */}
+                  <div className="space-y-2">
+                    {gameHistory.filter(entry => entry.player === 2).map((entry, index) => {
+                      const player2RunningTotal = gameHistory
+                        .filter(e => e.player === 2)
+                        .slice(0, index + 1)
+                        .reduce((sum, e) => sum + e.points, 0);
+                      
+                      return (
+                        <div key={`p2-${index}`} className="flex justify-between items-center text-base" style={{fontFamily: 'cursive'}}>
+                          <div className="font-semibold text-purple-800" style={{fontFamily: 'cursive'}}>
+                            {entry.isTurnSummary ? (
+                              <span className="text-purple-600 font-bold">{entry.points}</span>
+                            ) : (
+                              `${entry.points}`
+                            )}
+                          </div>
+                          <div className="text-gray-700 text-right flex-1 ml-2" style={{fontFamily: 'cursive'}}>
+                            {entry.isTurnSummary ? (
+                              <span className="text-sm italic">{entry.word}</span>
+                            ) : (
+                              entry.word
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Running Total */}
+                    {players.player2.score > 0 && (
+                      <div className="border-t border-purple-300 pt-2 mt-4">
+                        <div className="text-center font-bold text-2xl text-purple-700 bg-purple-50 rounded px-2 py-1" style={{fontFamily: 'cursive'}}>
+                          {players.player2.score}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
-          <GamePage
-            onAddWord={handleAddWord}
-            onClear={handleClearTiles}
-            onWordChange={(word, points, tiles) => {
-              setCurrentWord(word);
-              setCurrentPoints(points);
-              setUsedTiles(tiles || 0);
-            }}
-            onValidationChange={setValidationResult}
-            recentPlays={gameHistory}
-            players={{
-              player1: { name: players.player1.name },
-              player2: { name: players.player2.name }
-            }}
-            onResetGame={resetGame}
-            currentTurnWords={currentTurnWords.map(w => ({
-              word: w.word,
-              points: w.finalPoints,
-              definition: validationResult?.definition
-            }))}
-            onRemoveWord={removeWordFromTurn}
-            onWordClick={handleWordClick}
-            restoreToTiles={restoreToTiles}
-            onCompleteTurn={completeTurn}
-            currentTurnTotal={getTurnTotal()}
-            canCompleteTurn={currentTurnWords.length > 0}
-          />
+          // Game Page
+          <div>
+            {isCurrentGameFinal ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">Game Complete</h3>
+                <p className="text-gray-600 mb-4">This game has been finalized and cannot be edited.</p>
+                <div className="text-lg font-bold">
+                  {currentGame.winner === 1 ? players.player1.name : 
+                   currentGame.winner === 2 ? players.player2.name : 'Tie'} 
+                  {currentGame.winner ? ' Won!' : ''}
+                </div>
+                <div className="text-sm text-gray-500 mt-2">
+                  Final Score: {players.player1.score} - {players.player2.score}
+                </div>
+              </div>
+            ) : (
+              <>
+                <TileGrid
+                  onAddWord={handleAddWord}
+                  onClear={handleClearTiles}
+                  onWordChange={(word, points, tiles) => {
+                    setCurrentWord(word);
+                    setCurrentPoints(points);
+                    setUsedTiles(tiles || 0);
+                  }}
+                  onValidationChange={setValidationResult}
+                  recentPlays={gameHistory}
+                  players={{
+                    player1: { name: players.player1.name },
+                    player2: { name: players.player2.name }
+                  }}
+                  onResetGame={resetGame}
+                  currentTurnWords={currentTurnWords.map(w => ({
+                    word: w.word,
+                    points: w.finalPoints,
+                    definition: validationResult?.definition
+                  }))}
+                  onRemoveWord={removeWordFromTurn}
+                  onWordClick={handleWordClick}
+                  restoreToTiles={restoreToTiles}
+                  restoreMultipliers={restoreMultipliers}
+                  onCompleteTurn={completeTurn}
+                  onUndoTurn={undoTurn}
+                />
+
+                {/* Complete Turn Button
+                {currentTurnWords.length > 0 && (
+                  <div className="mt-6">
+                    <button
+                      onClick={completeTurn}
+                      className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-lg"
+                    >
+                      Complete Turn ({getTurnTotal()} points)
+                    </button>
+                  </div>
+                )} */}
+              </>
+            )}
+          </div>
         )}
       </div>
       
@@ -827,8 +1062,6 @@ const ScrabbleScorer: React.FC = () => {
       <TileDistributionModal 
         isOpen={showTileModal} 
         onClose={() => setShowTileModal(false)} 
-        usedTiles={usedTiles}
-        remainingTileCounts={{}} // TODO: Replace with actual tile counts if available
       />
     </div>
   );
