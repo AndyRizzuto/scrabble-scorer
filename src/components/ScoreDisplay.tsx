@@ -53,9 +53,9 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 
   return (
     <div className="mb-6 w-full">
-      <div className="flex flex-col sm:flex-row items-stretch gap-4 w-full">
-        {/* Player Score Boxes - Always vertical, max-w-35% */}
-        <div className="flex flex-col gap-3 w-full sm:max-w-[35%]">
+      <div className="flex flex-row items-stretch gap-4 w-full">
+        {/* Player Score Boxes - Always vertical, responsive width */}
+        <div className="flex flex-col gap-3 w-full max-w-[15%] sm:max-w-[35%]">
           <div className={`flex flex-col items-center justify-center w-full h-16 md:h-20 rounded-lg transition-all border-2 ${
             currentPlayer === 1 ? 'bg-blue-100 border-blue-400' : 'bg-gray-50 border-gray-300'
           }`}>
