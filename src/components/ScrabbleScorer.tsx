@@ -17,6 +17,39 @@ import MultiWordTurn from './MultiWordTurn';
 import TileDistributionModal from './TileDistributionModal';
 import TurnTimer from './TurnTimer';
 
+const ResponsiveTimer: React.FC<{ isActive: boolean; onTimerExpired?: () => void }> = ({ isActive, onTimerExpired }) => {
+  const [collapsed, setCollapsed] = React.useState(window.innerWidth < 640);
+  React.useEffect(() => {
+    const handleResize = () => setCollapsed(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  const [expanded, setExpanded] = React.useState(false);
+  if (!collapsed) {
+    return <TurnTimer isActive={isActive} onTimerExpired={onTimerExpired} />;
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        className="flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700 text-lg font-mono"
+        onClick={() => setExpanded(e => !e)}
+        aria-label={expanded ? 'Collapse timer' : 'Expand timer'}
+      >
+        <span className="min-w-[48px] text-center">
+          {/* Show just the time (let TurnTimer render time only) */}
+          <TurnTimer isActive={isActive} onTimerExpired={onTimerExpired} minimal={!expanded} />
+        </span>
+        <span className="ml-1">{expanded ? '▲' : '▼'}</span>
+      </button>
+      {expanded && (
+        <div className="absolute z-10 bg-white shadow-lg rounded p-2 mt-2">
+          <TurnTimer isActive={isActive} onTimerExpired={onTimerExpired} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ScrabbleScorer: React.FC = () => {
   // Player and game state
   const [players, setPlayers] = useState<{
@@ -288,42 +321,43 @@ const ScrabbleScorer: React.FC = () => {
               <ArrowRightLeft className="w-5 h-5" />
             </button>
             
-            {/* Tile Distribution Pill - Double Height */}
+            {/* Tile Distribution Pill - Responsive */}
             <button 
               onClick={() => setShowTileModal(true)}
-              className="text-base text-gray-600 bg-white px-6 py-3 rounded-full border hover:bg-gray-50 transition-colors cursor-pointer h-12 flex items-center"
+              className="text-base text-gray-600 bg-white px-6 py-3 rounded-full border hover:bg-gray-50 transition-colors cursor-pointer h-12 flex items-center min-w-[64px] whitespace-nowrap
+                sm:px-4 sm:text-sm
+                md:px-6 md:text-base"
               title="View remaining tiles"
             >
-              📦 {98 - 14 - usedTiles} tiles left
+              {98 - 14 - usedTiles} in bag
             </button>
             
-            {/* Turn Timer */}
+            {/* Turn Timer - Collapsible on small screens */}
             {currentPage === 'game' && (
-              <TurnTimer 
-                isActive={timerActive}
-                onTimerExpired={() => {
-                  // Optional: auto-switch turn when timer expires
-                  console.log('Timer expired for', players[`player${currentPlayer}`].name);
-                }}
-              />
+              <ResponsiveTimer isActive={timerActive} onTimerExpired={() => {
+                // Optional: auto-switch turn when timer expires
+                console.log('Timer expired for', players[`player${currentPlayer}`].name);
+              }} />
             )}
           </div>
         </div>
 
         {/* Show Score Display only on Game page */}
         {currentPage === 'game' && (
-          <ScoreDisplay
-            players={players}
-            currentPlayer={currentPlayer}
-            onScoresUpdate={handleScoresUpdate}
-            currentWord={currentWord}
-            currentPoints={currentPoints}
-            validationResult={validationResult}
-            usedTiles={usedTiles}
-            onSwitchTurn={switchTurn}
-            canSwitchTurn={currentTurnWords.length === 0}
-            editingScores={editingScores}
-          />
+          <div className="w-full">
+            <ScoreDisplay
+              players={players}
+              currentPlayer={currentPlayer}
+              onScoresUpdate={handleScoresUpdate}
+              currentWord={currentWord}
+              currentPoints={currentPoints}
+              validationResult={validationResult}
+              usedTiles={usedTiles}
+              onSwitchTurn={switchTurn}
+              canSwitchTurn={currentTurnWords.length === 0}
+              editingScores={editingScores}
+            />
+          </div>
         )}
 
         {currentPage === 'timeline' ? (

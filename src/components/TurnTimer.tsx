@@ -5,6 +5,7 @@ interface TurnTimerProps {
   isActive: boolean;
   onTurnEnd?: () => void;
   onTimerExpired?: () => void;
+  minimal?: boolean; // Only show time if true
 }
 
 export interface TimerSettings {
@@ -12,7 +13,7 @@ export interface TimerSettings {
   sound: string;
 }
 
-const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpired }) => {
+const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpired, minimal = false }) => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -22,7 +23,7 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
     sound: 'alarm'
   });
   
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<number | undefined>();
   const audioRef = useRef<HTMLAudioElement>();
 
   const soundOptions = [
@@ -260,6 +261,19 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
     }
     return '⏱️';
   };
+
+  if (minimal) {
+    // Only show the timer value (mm:ss or stopwatch)
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return (
+      <span className="font-mono text-lg">
+        {settings.duration > 0
+          ? `${minutes}:${seconds.toString().padStart(2, '0')}`
+          : `${minutes}:${seconds.toString().padStart(2, '0')}`}
+      </span>
+    );
+  }
 
   return (
     <>
