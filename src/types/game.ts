@@ -44,6 +44,9 @@ export interface ValidationResult {
   valid: boolean;
   word: string;
   definition?: string;
+  pronunciation?: string;
+  partOfSpeech?: string;
+  origin?: string;
 }
 
 export interface SetupData {

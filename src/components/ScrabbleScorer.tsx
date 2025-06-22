@@ -5,7 +5,8 @@ import {
   SetupData, 
   WordEntry, 
   GameHistoryEntry, 
-  BonusMultipliers 
+  BonusMultipliers,
+  ValidationResult 
 } from '../types/game';
 import { calculateWordValue, calculateBonusPoints } from '../utils/scoring';
 import GameSetup from './GameSetup';
@@ -29,8 +30,11 @@ const ScrabbleScorer: React.FC = () => {
   const [currentTurnWords, setCurrentTurnWords] = useState<WordEntry[]>([]);
   const [showMultiWordMode, setShowMultiWordMode] = useState(false);
   
-  // Simplified state for tile-based input
-  // All word input logic is now handled by TileGrid component
+  // Current word/points state for display
+  const [currentWord, setCurrentWord] = useState('');
+  const [currentPoints, setCurrentPoints] = useState(0);
+  const [usedTiles, setUsedTiles] = useState(0);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   
   // UI state
   const [showSetupModal, setShowSetupModal] = useState(true);
@@ -244,15 +248,12 @@ const ScrabbleScorer: React.FC = () => {
               players={players}
               currentPlayer={currentPlayer}
               onScoresUpdate={handleScoresUpdate}
-            />
-
-            <TurnManager
-              players={players}
-              currentPlayer={currentPlayer}
-              showMultiWordMode={showMultiWordMode}
-              currentTurnWords={currentTurnWords}
+              currentWord={currentWord}
+              currentPoints={currentPoints}
+              validationResult={validationResult}
+              usedTiles={usedTiles}
               onSwitchTurn={switchTurn}
-              onToggleMultiWordMode={toggleMultiWordMode}
+              canSwitchTurn={!(showMultiWordMode && currentTurnWords.length > 0)}
             />
 
             {showMultiWordMode && (
@@ -266,6 +267,20 @@ const ScrabbleScorer: React.FC = () => {
             <TileGrid
               onAddWord={handleAddWord}
               onClear={handleClearTiles}
+              onWordChange={(word, points, tiles) => {
+                setCurrentWord(word);
+                setCurrentPoints(points);
+                setUsedTiles(tiles || 0);
+              }}
+              onValidationChange={setValidationResult}
+              onToggleMultiWordMode={toggleMultiWordMode}
+              showMultiWordMode={showMultiWordMode}
+              recentPlays={gameHistory}
+              players={{
+                player1: { name: players.player1.name },
+                player2: { name: players.player2.name }
+              }}
+              onResetGame={resetGame}
             />
 
             {/* Multi-word turn completion */}
@@ -280,41 +295,7 @@ const ScrabbleScorer: React.FC = () => {
               </div>
             )}
 
-            {/* Reset Game Button */}
-            <div className="mt-6">
-              <button
-                onClick={resetGame}
-                className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Reset Game
-              </button>
-            </div>
 
-            {/* Game History */}
-            {gameHistory.length > 0 && (
-              <div className="border-t pt-6">
-                <h3 className="font-semibold text-gray-700 mb-4">Recent Plays</h3>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {gameHistory.slice(-10).reverse().map((entry, index) => (
-                    <div key={index} className={`flex justify-between items-center p-2 rounded text-sm ${
-                      entry.isTurnSummary ? 'bg-green-100 border border-green-300' : 'bg-gray-50'
-                    }`}>
-                      <span className={`font-medium ${
-                        entry.player === 1 ? 'text-blue-600' : 'text-purple-600'
-                      }`}>
-                        {players[`player${entry.player}`].name}
-                      </span>
-                      <span className={`font-mono ${entry.isTurnSummary ? 'text-xs' : ''}`}>
-                        {entry.word}
-                      </span>
-                      <span className="font-semibold">+{entry.points}</span>
-                      <span className="text-gray-500 text-xs">{entry.time}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
