@@ -593,6 +593,22 @@ const ScrabbleScorer: React.FC = () => {
     return { totalWins, currentStreak, hasFlame };
   };
 
+  // Atomic add word and complete turn
+  const handleAddWordAndCompleteTurn = (word: string, points: number, wordData?: Partial<WordEntry>) => {
+    if (word && points > 0 && validationResult?.valid) {
+      handleAddWord(word, points, wordData);
+      setTimeout(() => {
+        completeTurn();
+        handleClearTiles(); // Clear tiles after turn is completed
+      }, 0);
+    } else if (currentTurnWords.length > 0) {
+      completeTurn();
+      setTimeout(() => {
+        handleClearTiles();
+      }, 0);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
       {/* Setup Modal */}
@@ -742,7 +758,7 @@ const ScrabbleScorer: React.FC = () => {
                 {/* Message */}
                 <div className="text-center mt-8 text-gray-500" style={{fontFamily: 'cursive'}}>
                   <p className="text-lg">Ready to start a new game!</p>
-                  <p className="text-sm mt-2">Click \"New Game\" to begin scoring</p>
+                  <p className="text-sm mt-2">Click "New Game" to begin scoring</p>
                 </div>
               </div>
             ) : (
@@ -792,6 +808,7 @@ const ScrabbleScorer: React.FC = () => {
                   restoreMultipliers={restoreMultipliers || undefined}
                   onCompleteTurn={completeTurn}
                   onUndoTurn={undoTurn}
+                  onAddWordAndCompleteTurn={handleAddWordAndCompleteTurn}
                 />
               </>
             )}
