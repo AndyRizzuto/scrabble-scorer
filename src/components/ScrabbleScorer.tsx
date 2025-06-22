@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Users, BarChart3, RotateCcw, Edit3, ArrowRightLeft, Trophy } from 'lucide-react';
+import { Users, BarChart3, RotateCcw, Edit3, ArrowRightLeft, Trophy, CheckCircle } from 'lucide-react';
 import { 
   Player, 
   SetupData, 
   WordEntry, 
   GameHistoryEntry, 
   BonusMultipliers,
-  ValidationResult 
+  ValidationResult,
+  Game,
+  GameStatus 
 } from '../types/game';
 import { calculateWordValue, calculateBonusPoints } from '../utils/scoring';
 import GameSetup from './GameSetup';
@@ -18,33 +20,34 @@ import TileDistributionModal from './TileDistributionModal';
 import TurnTimer from './TurnTimer';
 import Timeline from './Timeline';
 
-const ResponsiveTimer: React.FC<{ isActive: boolean; onTimerExpired?: () => void }> = ({ isActive, onTimerExpired }) => {
-  const [collapsed, setCollapsed] = React.useState(window.innerWidth < 640);
-  React.useEffect(() => {
-    const handleResize = () => setCollapsed(window.innerWidth < 640);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  const [expanded, setExpanded] = React.useState(false);
-  if (!collapsed) {
-    return <TurnTimer isActive={isActive} onTimerExpired={onTimerExpired} />;
-  }
+const ResponsiveTimer: React.FC<{ 
+  isActive: boolean; 
+  onTimerExpired?: () => void;
+  onTimerPaused?: () => void;
+  currentPlayer: 1 | 2;
+  turnStartTime?: number;
+}> = ({ isActive, onTimerExpired, onTimerPaused, currentPlayer, turnStartTime }) => {
+  const [collapsed, setCollapsed] = React.useState(true);
+  
   return (
     <div className="flex items-center gap-2">
-      <button
-        className="flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700 text-lg font-mono"
-        onClick={() => setExpanded(e => !e)}
-        aria-label={expanded ? 'Collapse timer' : 'Expand timer'}
-      >
-        <span className="min-w-[48px] text-center">
-          {/* Show just the time (let TurnTimer render time only) */}
-          <TurnTimer isActive={isActive} onTimerExpired={onTimerExpired} minimal={!expanded} />
-        </span>
-        <span className="ml-1">{expanded ? '▲' : '▼'}</span>
-      </button>
-      {expanded && (
-        <div className="absolute z-10 bg-white shadow-lg rounded p-2 mt-2">
-          <TurnTimer isActive={isActive} onTimerExpired={onTimerExpired} />
+      {collapsed ? (
+        <button
+          className="flex items-center px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+          onClick={() => setCollapsed(false)}
+          aria-label="Expand timer"
+        >
+          <span className="text-lg">⏱️</span>
+        </button>
+      ) : (
+        <div onClick={() => setCollapsed(true)} className="cursor-pointer">
+          <TurnTimer 
+            isActive={isActive} 
+            onTimerExpired={onTimerExpired}
+            onTimerPaused={onTimerPaused}
+            currentPlayer={currentPlayer}
+            turnStartTime={turnStartTime}
+          />
         </div>
       )}
     </div>
@@ -52,18 +55,32 @@ const ResponsiveTimer: React.FC<{ isActive: boolean; onTimerExpired?: () => void
 };
 
 const ScrabbleScorer: React.FC = () => {
-  // Player and game state
-  const [players, setPlayers] = useState<{
-    player1: Player;
-    player2: Player;
-  }>({
-    player1: { id: 1, name: 'Andrew', score: 0 },
-    player2: { id: 2, name: 'Carla', score: 0 }
-  });
+  // Game management state
+  const [games, setGames] = useState<Game[]>([]);
+  const [currentGameId, setCurrentGameId] = useState<string | null>(null);
   
-  const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
-  const [gameHistory, setGameHistory] = useState<GameHistoryEntry[]>([]);
-  const [currentTurnWords, setCurrentTurnWords] = useState<WordEntry[]>([]);
+  // Get current game or create empty structure
+  const currentGame = games.find(g => g.id === currentGameId) || {
+    id: '',
+    status: 'active' as GameStatus,
+    startTime: Date.now(),
+    pausedTime: 0,
+    currentTurnStartTime: Date.now(),
+    players: {
+      player1: { id: 1, name: 'Andrew', score: 0 },
+      player2: { id: 2, name: 'Carla', score: 0 }
+    },
+    currentPlayer: 1 as 1 | 2,
+    gameHistory: [],
+    currentTurnWords: [],
+    tilesRemaining: 98
+  };
+  
+  // Legacy state for backward compatibility (derived from currentGame)
+  const players = currentGame.players;
+  const currentPlayer = currentGame.currentPlayer;
+  const gameHistory = currentGame.gameHistory;
+  const currentTurnWords = currentGame.currentTurnWords;
   
   // Game wins tracking - Preloaded with test data
   const generateTestData = () => {
@@ -112,41 +129,62 @@ const ScrabbleScorer: React.FC = () => {
   // UI state
   const [showSetupModal, setShowSetupModal] = useState(true);
   const [currentPage, setCurrentPage] = useState<'game' | 'score' | 'timeline'>('timeline');
+  
+  // Handle page changes with game status management
+  const handlePageChange = (page: 'game' | 'score' | 'timeline') => {
+    // Pause current game when leaving game page
+    if (currentGameId && currentGame.status === 'active' && currentPage === 'game' && page !== 'game') {
+      setGameStatus(currentGameId, 'paused');
+    }
+    
+    // Resume game when returning to game page (only if navigating from timeline)
+    if (currentGameId && currentGame.status === 'paused' && page === 'game') {
+      setGameStatus(currentGameId, 'active');
+    }
+    
+    setCurrentPage(page);
+  };
   const [selectedWordDefinition, setSelectedWordDefinition] = useState<{word: string; definition?: string} | null>(null);
   const [restoreToTiles, setRestoreToTiles] = useState<string>('');
+  const [restoreMultipliers, setRestoreMultipliers] = useState<{
+    letterMultipliers: number[];
+    wordMultiplier: number;
+  } | null>(null);
   const [editingScores, setEditingScores] = useState(false);
   const [showTileModal, setShowTileModal] = useState(false);
-  const [timerActive, setTimerActive] = useState(false);
 
   // Handlers
   const handleSetupSubmit = (data: SetupData) => {
-    setPlayers({
-      player1: { id: 1, name: data.player1Name, score: data.player1Score },
-      player2: { id: 2, name: data.player2Name, score: data.player2Score }
-    });
+    const newGame = createNewGame(data);
+    setGames(prev => [...prev, newGame]);
+    setCurrentGameId(newGame.id);
     setShowSetupModal(false);
   };
 
   const handleScoresUpdate = (scores: { player1: number; player2: number }) => {
-    setPlayers(prev => ({
-      player1: { ...prev.player1, score: scores.player1 },
-      player2: { ...prev.player2, score: scores.player2 }
-    }));
+    updateCurrentGame({
+      players: {
+        player1: { ...currentGame.players.player1, score: scores.player1 },
+        player2: { ...currentGame.players.player2, score: scores.player2 }
+      }
+    });
   };
 
   // Always add words to current turn (word shelf approach)
-  const handleAddWord = (word: string, points: number) => {
+  const handleAddWord = (word: string, points: number, wordData?: Partial<WordEntry>) => {
     const newWord: WordEntry = {
       word: word.toUpperCase(),
-      basePoints: calculateWordValue(word),
-      bonusPoints: points,
+      basePoints: wordData?.basePoints || calculateWordValue(word),
+      bonusPoints: wordData?.bonusPoints || (points - calculateWordValue(word)),
       finalPoints: points,
-      bonuses: { letterMultiplier: 1, wordMultiplier: 1 }, // TileGrid handles this internally
-      letterMultipliers: [], // TileGrid handles this internally
-      bingoBonus: false, // TileGrid handles this internally
+      bonuses: wordData?.bonuses || { letterMultiplier: 1, wordMultiplier: 1 },
+      letterMultipliers: wordData?.letterMultipliers || [],
+      bingoBonus: wordData?.bingoBonus || false,
       tilesUsed: word.length
     };
-    setCurrentTurnWords(prev => [...prev, newWord]);
+    updateCurrentGame({
+      currentTurnWords: [...currentGame.currentTurnWords, newWord]
+    });
   };
 
   const handleClearTiles = () => {
@@ -154,16 +192,48 @@ const ScrabbleScorer: React.FC = () => {
   };
 
 
-  const removeWordFromTurn = (index: number) => {
+  const removeWordFromTurn = (index: number, currentWordInfo?: {word: string, points: number, isValid: boolean}) => {
     const wordToRestore = currentTurnWords[index];
-    if (wordToRestore) {
-      // Restore the word to tiles
-      setRestoreToTiles(wordToRestore.word);
-      // Clear the restore state after a short delay to allow the effect to trigger
-      setTimeout(() => setRestoreToTiles(''), 100);
+    
+    // If there's a valid current word, add it to shelf before removing the pill word
+    if (currentWordInfo && currentWordInfo.isValid && currentWordInfo.word && currentWordInfo.points > 0) {
+      const newWordEntry: WordEntry = {
+        word: currentWordInfo.word.toUpperCase(),
+        basePoints: calculateWordValue(currentWordInfo.word),
+        bonusPoints: currentWordInfo.points,
+        finalPoints: currentWordInfo.points,
+        bonuses: { letterMultiplier: 1, wordMultiplier: 1 }, // Will be updated by TileGrid
+        letterMultipliers: [], // Will be updated by TileGrid
+        bingoBonus: false, // Will be updated by TileGrid
+        tilesUsed: currentWordInfo.word.length
+      };
+      
+      // Add current word to shelf
+      updateCurrentGame({
+        currentTurnWords: [...currentGame.currentTurnWords, newWordEntry]
+      });
     }
-    // Remove the word from the turn
-    setCurrentTurnWords(prev => prev.filter((_, i) => i !== index));
+    
+    if (wordToRestore) {
+      // Restore the word to tiles with full multiplier data
+      setRestoreToTiles(wordToRestore.word);
+      setRestoreMultipliers({
+        letterMultipliers: wordToRestore.letterMultipliers,
+        wordMultiplier: wordToRestore.bonuses.wordMultiplier
+      });
+      // Clear the restore state after a short delay to allow the effect to trigger
+      setTimeout(() => {
+        setRestoreToTiles('');
+        setRestoreMultipliers(null);
+      }, 100);
+    }
+    
+    // Remove the word from the turn (with slight delay to allow current word to be added first)
+    setTimeout(() => {
+      updateCurrentGame({
+        currentTurnWords: currentGame.currentTurnWords.filter((_, i) => i !== index)
+      });
+    }, 50);
   };
 
   const getTurnTotal = () => {
@@ -176,41 +246,48 @@ const ScrabbleScorer: React.FC = () => {
     const totalPoints = getTurnTotal();
     const playerKey = `player${currentPlayer}` as const;
     
-    setPlayers(prev => ({
-      ...prev,
-      [playerKey]: {
-        ...prev[playerKey],
-        score: prev[playerKey].score + totalPoints
-      }
-    }));
-
+    // Create new word entries for history
+    const newHistoryEntries: GameHistoryEntry[] = [];
+    
     // Add each word to history
     currentTurnWords.forEach(wordEntry => {
-      setGameHistory(prev => [...prev, {
+      newHistoryEntries.push({
         player: currentPlayer,
         word: wordEntry.word,
         points: wordEntry.finalPoints,
-        time: new Date().toLocaleTimeString(),
-        bonuses: wordEntry.bonuses
-      }]);
+        time: new Date().toISOString(),
+        bonuses: wordEntry.bonuses,
+        letterMultipliers: wordEntry.letterMultipliers,
+        bingoBonus: wordEntry.bingoBonus,
+        basePoints: wordEntry.basePoints
+      });
     });
 
     // Add turn summary to history if multiple words
     if (currentTurnWords.length > 1) {
-      setGameHistory(prev => [...prev, {
+      newHistoryEntries.push({
         player: currentPlayer,
         word: `TURN TOTAL (${currentTurnWords.length} words)`,
         points: totalPoints,
-        time: new Date().toLocaleTimeString(),
+        time: new Date().toISOString(),
         isTurnSummary: true
-      }]);
+      });
     }
-
-    // Reset turn
-    setCurrentTurnWords([]);
     
-    // Switch to next player and start timer
-    setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
+    // Update the current game
+    updateCurrentGame({
+      players: {
+        ...currentGame.players,
+        [playerKey]: {
+          ...currentGame.players[playerKey],
+          score: currentGame.players[playerKey].score + totalPoints
+        }
+      },
+      gameHistory: [...currentGame.gameHistory, ...newHistoryEntries],
+      currentTurnWords: [],
+      currentPlayer: currentPlayer === 1 ? 2 : 1
+    });
+    
     setTimerActive(true);
   };
 
@@ -222,6 +299,90 @@ const ScrabbleScorer: React.FC = () => {
     setEditingScores(!editingScores);
   };
 
+
+  const undoTurn = (turnIndex: number) => {
+    if (!confirm('Undo this turn? This will restore the words to your tiles and reverse the score changes.')) {
+      return;
+    }
+    
+    // Group history entries by turns (like in TileGrid)
+    const turns: Array<{player: number, entries: typeof gameHistory}> = [];
+    let currentTurn: {player: number, entries: typeof gameHistory} | null = null;
+    
+    [...gameHistory].reverse().forEach(entry => {
+      if (entry.isTurnSummary) return;
+      
+      if (!currentTurn || currentTurn.player !== entry.player) {
+        if (currentTurn) turns.push(currentTurn);
+        currentTurn = {
+          player: entry.player,
+          entries: [entry]
+        };
+      } else {
+        currentTurn.entries.push(entry);
+      }
+    });
+    
+    if (currentTurn) turns.push(currentTurn);
+    
+    // Get the turn to undo
+    const turnToUndo = turns[turnIndex];
+    if (!turnToUndo) return;
+    
+    // Calculate score to subtract
+    const scoreToSubtract = turnToUndo.entries.reduce((sum, entry) => sum + entry.points, 0);
+    
+    // Remove turn entries from history
+    const entriesToRemove = new Set(turnToUndo.entries);
+    const newHistory = gameHistory.filter(entry => !entriesToRemove.has(entry));
+    
+    // Update player score
+    const playerKey = `player${turnToUndo.player}` as 'player1' | 'player2';
+    const newPlayers = {
+      ...currentGame.players,
+      [playerKey]: {
+        ...currentGame.players[playerKey],
+        score: Math.max(0, currentGame.players[playerKey].score - scoreToSubtract)
+      }
+    };
+    
+    // Restore words: all but last to shelf, last to tiles
+    const wordsToRestore = turnToUndo.entries.map(entry => ({
+      word: entry.word,
+      basePoints: entry.basePoints || calculateWordValue(entry.word),
+      bonusPoints: entry.points - (entry.basePoints || calculateWordValue(entry.word)),
+      finalPoints: entry.points,
+      bonuses: entry.bonuses || { letterMultiplier: 1, wordMultiplier: 1 },
+      letterMultipliers: entry.letterMultipliers || [],
+      bingoBonus: entry.bingoBonus || false,
+      tilesUsed: entry.word.length
+    }));
+    
+    // Restore all words except the last to current turn shelf
+    const wordsForShelf = wordsToRestore.slice(0, -1);
+    const lastWord = wordsToRestore[wordsToRestore.length - 1];
+    
+    // Restore last word to tiles
+    if (lastWord) {
+      setRestoreToTiles(lastWord.word);
+      setRestoreMultipliers({
+        letterMultipliers: lastWord.letterMultipliers,
+        wordMultiplier: lastWord.bonuses.wordMultiplier
+      });
+      setTimeout(() => {
+        setRestoreToTiles('');
+        setRestoreMultipliers(null);
+      }, 100);
+    }
+    
+    // Update game state
+    updateCurrentGame({
+      gameHistory: newHistory,
+      players: newPlayers,
+      currentPlayer: turnToUndo.player as 1 | 2,  // Switch back to the player who played that turn
+      currentTurnWords: wordsForShelf  // Restore other words to shelf
+    });
+  };
 
   const resetGame = () => {
     if (confirm('Are you sure you want to reset the game? This will clear all scores and history.')) {
@@ -264,16 +425,156 @@ const ScrabbleScorer: React.FC = () => {
   };
 
   const handleGameClick = (gameId: string) => {
-    // Switch to score sheet and show that specific game
-    setCurrentPage('score');
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+    
+    // Set this game as current
+    setCurrentGameId(gameId);
+    
+    // Handle interaction based on game status:
+    if (game.status === 'final') {
+      // Final games: make current and go to score sheet
+      handlePageChange('score');
+    } else if (game.status === 'paused') {
+      // Paused games: make current, set to active, go to game tab
+      setGameStatus(gameId, 'active');
+      handlePageChange('game');
+    } else if (game.status === 'active') {
+      // Active games: go to game tab
+      handlePageChange('game');
+    }
+  };
+
+  // Game management functions
+  const createNewGame = (setupData: SetupData): Game => {
+    const gameId = `game-${Date.now()}`;
+    const now = Date.now();
+    const newGame: Game = {
+      id: gameId,
+      status: 'active',
+      startTime: now,
+      pausedTime: 0,
+      currentTurnStartTime: now,
+      players: {
+        player1: { id: 1, name: setupData.player1Name, score: setupData.player1Score },
+        player2: { id: 2, name: setupData.player2Name, score: setupData.player2Score }
+      },
+      currentPlayer: 1,
+      gameHistory: [],
+      currentTurnWords: [],
+      tilesRemaining: 98
+    };
+    return newGame;
+  };
+
+  const updateCurrentGame = (updates: Partial<Game>) => {
+    if (!currentGameId) return;
+    setGames(prev => prev.map(game => 
+      game.id === currentGameId 
+        ? { ...game, ...updates }
+        : game
+    ));
+  };
+
+  const setGameStatus = (gameId: string, status: GameStatus) => {
+    setGames(prev => prev.map(game => {
+      if (game.id === gameId) {
+        const now = Date.now();
+        const updates: Partial<Game> = { status };
+        
+        if (status === 'paused' && game.status === 'active') {
+          // Starting a pause
+          updates.lastPauseStart = now;
+        } else if (status === 'active' && game.status === 'paused') {
+          // Resuming from pause
+          if (game.lastPauseStart) {
+            updates.pausedTime = game.pausedTime + (now - game.lastPauseStart);
+            updates.lastPauseStart = undefined;
+          }
+        } else if (status === 'final') {
+          // Finalizing game
+          updates.endTime = now;
+          
+          // Add any remaining pause time
+          if (game.status === 'paused' && game.lastPauseStart) {
+            updates.pausedTime = game.pausedTime + (now - game.lastPauseStart);
+            updates.lastPauseStart = undefined;
+          }
+          
+          // Determine winner
+          if (game.players.player1.score > game.players.player2.score) {
+            updates.winner = 1;
+          } else if (game.players.player2.score > game.players.player1.score) {
+            updates.winner = 2;
+          } else {
+            updates.winner = null;
+          }
+        }
+        
+        return { ...game, ...updates };
+      }
+      return game;
+    }));
+  };
+
+  // Legacy function for Timeline component - calculates active play time
+  const getGameDurationForTimeline = (game: Game): number => {
+    const now = Date.now();
+    let endTime = game.endTime || now;
+    
+    // If game is currently paused, add current pause time
+    let totalPausedTime = game.pausedTime;
+    if (game.status === 'paused' && game.lastPauseStart) {
+      totalPausedTime += (now - game.lastPauseStart);
+    }
+    
+    return endTime - game.startTime - totalPausedTime;
+  };
+  
+  // Format duration in minutes and seconds
+  const formatDuration = (milliseconds: number): string => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Timer calculation helpers
+  const getCurrentTurnDuration = (game: Game): number => {
+    if (!game.currentTurnStartTime) return 0;
+    return Date.now() - game.currentTurnStartTime;
+  };
+
+  const getGameTimer = (game: Game): number => {
+    // Active playing time (excluding paused time)
+    const totalGameTime = Date.now() - game.startTime;
+    let currentPausedTime = game.pausedTime;
+    
+    // Add current pause duration if game is currently paused
+    if (game.status === 'paused' && game.lastPauseStart) {
+      currentPausedTime += Date.now() - game.lastPauseStart;
+    }
+    
+    return Math.max(0, totalGameTime - currentPausedTime);
+  };
+
+  const getGameDuration = (game: Game): number => {
+    // Total time from start to finish (including paused time)
+    if (game.endTime) {
+      return game.endTime - game.startTime;
+    }
+    return Date.now() - game.startTime;
   };
 
   const hasExistingGames = gameWins.player1.length > 0 || gameWins.player2.length > 0;
-  const hasCurrentGame = gameHistory.length > 0 || players.player1.score > 0 || players.player2.score > 0;
+  const hasCurrentGame = currentGameId && games.some(g => g.id === currentGameId);
+  const isCurrentGameFinal = currentGame.status === 'final';
 
   const switchTurn = () => {
-    setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-    setTimerActive(true);
+    updateCurrentGame({
+      currentPlayer: currentPlayer === 1 ? 2 : 1,
+      currentTurnStartTime: Date.now()
+    });
   };
 
   // Calculate win statistics
@@ -325,17 +626,25 @@ const ScrabbleScorer: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => setCurrentPage('game')}
+                onClick={() => {
+                  if (hasCurrentGame) {
+                    handlePageChange('game');
+                  } else {
+                    setShowSetupModal(true);
+                  }
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === 'game' 
-                    ? (hasCurrentGame ? 'bg-blue-600 text-white' : 'bg-green-600 text-white')
-                    : (hasCurrentGame ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-green-100 text-green-700 hover:bg-green-200')
+                    ? 'bg-green-600 text-white'
+                    : hasCurrentGame
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
                 {hasCurrentGame ? 'Game' : 'New Game'}
               </button>
               <button
-                onClick={() => setCurrentPage('score')}
+                onClick={() => handlePageChange('score')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === 'score' 
                     ? 'bg-green-600 text-white' 
@@ -345,7 +654,7 @@ const ScrabbleScorer: React.FC = () => {
                 <span style={{fontFamily: 'cursive'}}>Score</span>
               </button>
               <button
-                onClick={() => setCurrentPage('timeline')}
+                onClick={() => handlePageChange('timeline')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === 'timeline' 
                     ? 'bg-purple-600 text-white' 
@@ -355,11 +664,13 @@ const ScrabbleScorer: React.FC = () => {
                 Timeline
               </button>
             </div>
+            <div className="w-16"></div>
           </div>
           
-          {/* Header Controls Row - Only show on Game and Score pages */}
-          {currentPage !== 'timeline' && (
-            <div className="flex items-center justify-center gap-4 mb-4">
+          {/* Header Controls Row */}
+          {currentPage === 'game' && (
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-4">
               {/* Edit Score Button */}
               <button
                 onClick={handleToggleEditScores}
@@ -391,16 +702,41 @@ const ScrabbleScorer: React.FC = () => {
                   md:px-6 md:text-base"
                 title="View remaining tiles"
               >
-                {98 - 14 - usedTiles} in bag
+                🎒 {98 - 14 - usedTiles} in bag
               </button>
               
-              {/* Turn Timer - Collapsible on small screens */}
-              {currentPage === 'game' && (
-                <ResponsiveTimer isActive={timerActive} onTimerExpired={() => {
-                  // Optional: auto-switch turn when timer expires
-                  console.log('Timer expired for', players[`player${currentPlayer}`].name);
-                }} />
-              )}
+              </div>
+              
+              {/* Turn Timer - Right justified */}
+              <ResponsiveTimer 
+                isActive={currentGame.status === 'active' && currentPage === 'game'} 
+                onTimerPaused={() => {
+                  if (currentGameId) {
+                    setGameStatus(currentGameId, 'paused');
+                  }
+                }}
+                currentPlayer={currentPlayer}
+                turnStartTime={currentGame.currentTurnStartTime}
+                onTimerExpired={() => {
+                // Optional: auto-switch turn when timer expires
+                console.log('Timer expired for', players[`player${currentPlayer}`].name);
+              }} />
+            </div>
+          )}
+          
+          {/* Score page header - Just tile bag on the right */}
+          {currentPage === 'score' && (
+            <div className="flex items-center justify-end gap-4 mb-4">
+              {/* Tile Distribution Pill - Responsive */}
+              <button 
+                onClick={() => setShowTileModal(true)}
+                className="text-base text-gray-600 bg-white px-6 py-3 rounded-full border hover:bg-gray-50 transition-colors cursor-pointer h-12 flex items-center min-w-[64px] whitespace-nowrap
+                  sm:px-4 sm:text-sm
+                  md:px-6 md:text-base"
+                title="View remaining tiles"
+              >
+                🎒 {98 - 14 - usedTiles} in bag
+              </button>
             </div>
           )}
         </div>
@@ -408,18 +744,34 @@ const ScrabbleScorer: React.FC = () => {
         {/* Show Score Display only on Game page */}
         {currentPage === 'game' && (
           <div className="w-full">
-            <ScoreDisplay
-              players={players}
-              currentPlayer={currentPlayer}
-              onScoresUpdate={handleScoresUpdate}
-              currentWord={currentWord}
-              currentPoints={currentPoints}
-              validationResult={validationResult}
-              usedTiles={usedTiles}
-              onSwitchTurn={switchTurn}
-              canSwitchTurn={currentTurnWords.length === 0}
-              editingScores={editingScores}
-            />
+            {isCurrentGameFinal ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">Game Complete</h3>
+                <p className="text-gray-600 mb-4">This game has been finalized and cannot be edited.</p>
+                <div className="text-lg font-bold">
+                  {currentGame.winner === 1 ? players.player1.name : 
+                   currentGame.winner === 2 ? players.player2.name : 'Tie'} 
+                  {currentGame.winner ? ' Won!' : ''}
+                </div>
+                <div className="text-sm text-gray-500 mt-2">
+                  Final Score: {players.player1.score} - {players.player2.score}
+                </div>
+              </div>
+            ) : (
+              <ScoreDisplay
+                players={players}
+                currentPlayer={currentPlayer}
+                onScoresUpdate={handleScoresUpdate}
+                currentWord={currentWord}
+                currentPoints={currentPoints}
+                validationResult={validationResult}
+                usedTiles={usedTiles}
+                onSwitchTurn={switchTurn}
+                canSwitchTurn={currentTurnWords.length === 0}
+                editingScores={editingScores}
+              />
+            )}
           </div>
         )}
 
@@ -428,8 +780,11 @@ const ScrabbleScorer: React.FC = () => {
             players={players}
             gameHistory={gameHistory}
             gameWins={gameWins}
+            games={games}
             onCreateGame={handleCreateGame}
             onGameClick={handleGameClick}
+            formatDuration={formatDuration}
+            getGameDuration={getGameDurationForTimeline}
           />
         ) : currentPage === 'score' ? (
           // Timeline Page - Paper Score Sheet Style
@@ -632,45 +987,63 @@ const ScrabbleScorer: React.FC = () => {
         ) : (
           // Game Page
           <div>
-            <TileGrid
-              onAddWord={handleAddWord}
-              onClear={handleClearTiles}
-              onWordChange={(word, points, tiles) => {
-                setCurrentWord(word);
-                setCurrentPoints(points);
-                setUsedTiles(tiles || 0);
-              }}
-              onValidationChange={setValidationResult}
-              recentPlays={gameHistory}
-              players={{
-                player1: { name: players.player1.name },
-                player2: { name: players.player2.name }
-              }}
-              onResetGame={resetGame}
-              currentTurnWords={currentTurnWords.map(w => ({
-                word: w.word,
-                points: w.finalPoints,
-                definition: validationResult?.definition
-              }))}
-              onRemoveWord={removeWordFromTurn}
-              onWordClick={handleWordClick}
-              restoreToTiles={restoreToTiles}
-              onCompleteTurn={completeTurn}
-            />
-
-            {/* Complete Turn Button */}
-            {currentTurnWords.length > 0 && (
-              <div className="mt-6">
-                <button
-                  onClick={completeTurn}
-                  className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-lg"
-                >
-                  Complete Turn ({getTurnTotal()} points)
-                </button>
+            {isCurrentGameFinal ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">Game Complete</h3>
+                <p className="text-gray-600 mb-4">This game has been finalized and cannot be edited.</p>
+                <div className="text-lg font-bold">
+                  {currentGame.winner === 1 ? players.player1.name : 
+                   currentGame.winner === 2 ? players.player2.name : 'Tie'} 
+                  {currentGame.winner ? ' Won!' : ''}
+                </div>
+                <div className="text-sm text-gray-500 mt-2">
+                  Final Score: {players.player1.score} - {players.player2.score}
+                </div>
               </div>
+            ) : (
+              <>
+                <TileGrid
+                  onAddWord={handleAddWord}
+                  onClear={handleClearTiles}
+                  onWordChange={(word, points, tiles) => {
+                    setCurrentWord(word);
+                    setCurrentPoints(points);
+                    setUsedTiles(tiles || 0);
+                  }}
+                  onValidationChange={setValidationResult}
+                  recentPlays={gameHistory}
+                  players={{
+                    player1: { name: players.player1.name },
+                    player2: { name: players.player2.name }
+                  }}
+                  onResetGame={resetGame}
+                  currentTurnWords={currentTurnWords.map(w => ({
+                    word: w.word,
+                    points: w.finalPoints,
+                    definition: validationResult?.definition
+                  }))}
+                  onRemoveWord={removeWordFromTurn}
+                  onWordClick={handleWordClick}
+                  restoreToTiles={restoreToTiles}
+                  restoreMultipliers={restoreMultipliers}
+                  onCompleteTurn={completeTurn}
+                  onUndoTurn={undoTurn}
+                />
+
+                {/* Complete Turn Button
+                {currentTurnWords.length > 0 && (
+                  <div className="mt-6">
+                    <button
+                      onClick={completeTurn}
+                      className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-lg"
+                    >
+                      Complete Turn ({getTurnTotal()} points)
+                    </button>
+                  </div>
+                )} */}
+              </>
             )}
-
-
           </div>
         )}
       </div>
@@ -688,13 +1061,13 @@ const ScrabbleScorer: React.FC = () => {
 const LogoWithFallback: React.FC = () => {
   const [showFallback, setShowFallback] = React.useState(false);
   return showFallback ? (
-    <span className="text-4xl font-extrabold tracking-tight text-blue-700 drop-shadow-lg">SKOREBORED</span>
+    <span className="text-2xl sm:text-4xl font-extrabold tracking-tight text-blue-700 drop-shadow-lg">SKOREBORED</span>
   ) : (
     <img
       src="/logo.svg"
       alt="SKOREBORED"
-      className="h-24 w-auto max-w-xs mx-auto drop-shadow-xl"
-      style={{ minHeight: 64 }}
+      className="h-16 sm:h-24 w-auto max-w-xs mx-auto drop-shadow-xl"
+      style={{ minHeight: 48 }}
       onError={() => setShowFallback(true)}
       draggable={false}
     />

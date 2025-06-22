@@ -1,6 +1,6 @@
 import React from 'react';
-import { Calendar, Trophy, TrendingUp, BarChart3, Plus } from 'lucide-react';
-import { Player, GameHistoryEntry } from '../types/game';
+import { Calendar, Trophy, TrendingUp, BarChart3, Plus, Play, Pause, CheckCircle } from 'lucide-react';
+import { Player, GameHistoryEntry, Game } from '../types/game';
 
 interface GameSession {
   id: string;
@@ -10,6 +10,7 @@ interface GameSession {
   winner: 1 | 2 | null;
   duration?: string;
   totalWords: number;
+  status?: 'active' | 'paused' | 'final';
 }
 
 interface TimelineProps {
@@ -22,44 +23,29 @@ interface TimelineProps {
     player1: number[];
     player2: number[];
   };
+  games: Game[];
   onCreateGame: () => void;
   onGameClick: (gameId: string) => void;
+  formatDuration: (milliseconds: number) => string;
+  getGameDuration: (game: Game) => number;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ players, gameHistory, gameWins, onCreateGame, onGameClick }) => {
-  // Generate mock game sessions from game wins data
-  const generateGameSessions = (): GameSession[] => {
-    const sessions: GameSession[] = [];
-    
-    // Combine all wins with timestamps
-    const allWins = [
-      ...gameWins.player1.map(timestamp => ({ player: 1, timestamp })),
-      ...gameWins.player2.map(timestamp => ({ player: 2, timestamp }))
-    ].sort((a, b) => b.timestamp - a.timestamp); // Most recent first
-
-    allWins.forEach((win, index) => {
-      const date = new Date(win.timestamp);
-      const winner = win.player as 1 | 2;
-      
-      // Generate realistic-looking scores
-      const winnerScore = Math.floor(Math.random() * 150) + 200; // 200-350
-      const loserScore = Math.floor(Math.random() * 100) + 100;  // 100-200
-      
-      sessions.push({
-        id: `game-${win.timestamp}`,
-        date,
-        player1Score: winner === 1 ? winnerScore : loserScore,
-        player2Score: winner === 2 ? winnerScore : loserScore,
-        winner,
-        duration: `${Math.floor(Math.random() * 30) + 15}m`, // 15-45 minutes
-        totalWords: Math.floor(Math.random() * 20) + 15 // 15-35 words
-      });
-    });
-
-    return sessions;
+const Timeline: React.FC<TimelineProps> = ({ players, gameHistory, gameWins, games, onCreateGame, onGameClick, formatDuration, getGameDuration }) => {
+  // Convert games to timeline sessions
+  const convertGamesToSessions = (): GameSession[] => {
+    return games.map(game => ({
+      id: game.id,
+      date: new Date(game.startTime),
+      player1Score: game.players.player1.score,
+      player2Score: game.players.player2.score,
+      winner: game.winner,
+      duration: formatDuration(getGameDuration(game)),
+      totalWords: game.gameHistory.filter(h => !h.isTurnSummary).length,
+      status: game.status
+    })).sort((a, b) => b.date.getTime() - a.date.getTime()); // Most recent first
   };
 
-  const gameSessions = generateGameSessions();
+  const gameSessions = convertGamesToSessions();
   
   // Group sessions by date
   const groupSessionsByDate = (sessions: GameSession[]) => {
@@ -198,11 +184,27 @@ const Timeline: React.FC<TimelineProps> = ({ players, gameHistory, gameWins, onC
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
-                        {session.winner && (
+                        {session.status === 'final' && session.winner && (
                           <Trophy className={`w-5 h-5 ${session.winner === 1 ? 'text-blue-500' : 'text-purple-500'}`} />
                         )}
-                        <span className="font-medium text-gray-800">
-                          {session.winner === 1 ? players.player1.name : players.player2.name} Won
+                        <span className="font-medium">
+                          {session.status === 'final' && session.winner ? (
+                            <span className="text-gray-800">
+                              {session.winner === 1 ? players.player1.name : players.player2.name} Won
+                            </span>
+                          ) : (
+                            // For active/paused games, show leading player with score difference
+                            (() => {
+                              const scoreDiff = Math.abs(session.player1Score - session.player2Score);
+                              if (session.player1Score > session.player2Score) {
+                                return <span className="text-blue-600">{players.player1.name} +{scoreDiff}</span>;
+                              } else if (session.player2Score > session.player1Score) {
+                                return <span className="text-purple-600">{players.player2.name} +{scoreDiff}</span>;
+                              } else {
+                                return <span className="text-gray-800">Tied</span>;
+                              }
+                            })()
+                          )}
                         </span>
                       </div>
                     </div>
@@ -230,6 +232,24 @@ const Timeline: React.FC<TimelineProps> = ({ players, gameHistory, gameWins, onC
                       <div className="text-center">
                         <div className="font-medium">{session.totalWords}</div>
                         <div className="text-xs">Words</div>
+                      </div>
+                      
+                      {/* Game Status */}
+                      <div className="text-center">
+                        <div className="flex items-center gap-1">
+                          {session.status === 'active' && (
+                            <><Play className="w-4 h-4 text-green-500" />
+                            <span className="font-medium text-green-600">Active</span></>
+                          )}
+                          {session.status === 'paused' && (
+                            <><Pause className="w-4 h-4 text-yellow-500" />
+                            <span className="font-medium text-yellow-600">Paused</span></>
+                          )}
+                          {session.status === 'final' && (
+                            <><CheckCircle className="w-4 h-4 text-gray-500" />
+                            <span className="font-medium text-gray-600">Final</span></>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

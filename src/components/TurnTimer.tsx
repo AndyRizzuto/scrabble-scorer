@@ -5,6 +5,9 @@ interface TurnTimerProps {
   isActive: boolean;
   onTurnEnd?: () => void;
   onTimerExpired?: () => void;
+  onTimerPaused?: () => void;
+  currentPlayer: 1 | 2;
+  turnStartTime?: number;
   minimal?: boolean; // Only show time if true
 }
 
@@ -13,7 +16,7 @@ export interface TimerSettings {
   sound: string;
 }
 
-const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpired, minimal = false }) => {
+const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpired, onTimerPaused, currentPlayer, turnStartTime, minimal = false }) => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -37,17 +40,30 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
     { value: 'klaxon', label: 'Klaxon' }
   ];
 
+  const [previousPlayer, setPreviousPlayer] = useState<1 | 2>(currentPlayer);
+  
+  // Reset timer when turn changes (currentPlayer changes)
+  useEffect(() => {
+    if (currentPlayer !== previousPlayer) {
+      setTime(0);
+      setIsRunning(false);
+      setIsPaused(false);
+      setPreviousPlayer(currentPlayer);
+    }
+  }, [currentPlayer, previousPlayer]);
+
   // Start timer when turn becomes active (only reset time when turn changes, not when resuming)
   useEffect(() => {
     if (isActive && !isPaused && !isRunning) {
       setIsRunning(true);
       if (settings.duration > 0) {
         setTime(settings.duration * 60); // Convert minutes to seconds
-      } else {
+      } else if (time === 0) {
+        // Only reset to 0 if timer is at 0 (new game scenario)
         setTime(0);
       }
     }
-  }, [isActive, settings.duration, isPaused, isRunning]);
+  }, [isActive, settings.duration, isPaused, isRunning, time]);
 
   // Timer logic
   useEffect(() => {
@@ -163,7 +179,13 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
       setIsPaused(false);
     } else {
       // Toggle pause/resume if it's running
-      setIsPaused(!isPaused);
+      const newPausedState = !isPaused;
+      setIsPaused(newPausedState);
+      
+      // Call onTimerPaused when manually pausing the timer
+      if (newPausedState && onTimerPaused) {
+        onTimerPaused();
+      }
     }
   };
 
@@ -224,13 +246,6 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
             title={!isRunning || isPaused ? 'Start/Resume' : 'Pause'}
           >
             {!isRunning || isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={handleReset}
-            className="p-1 rounded-full hover:bg-gray-200 transition-colors"
-            title="Reset timer"
-          >
-            <RotateCcw className="w-4 h-4" />
           </button>
           <button
             onClick={() => setShowSettings(true)}
