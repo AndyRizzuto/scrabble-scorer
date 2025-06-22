@@ -52,12 +52,11 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   }, [editingScores]);
 
   return (
-    <div className="mb-6 flex items-center gap-4">
-      {/* Compact Score Display with Current Word to the Right */}
-      <div className="flex items-center gap-4 flex-1">
-        {/* Player Score Boxes - Same Size as Letter Tiles */}
-        <div className="flex gap-3">
-          <div className={`flex flex-col items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg transition-all border-2 ${
+    <div className="mb-6 w-full">
+      <div className="flex flex-col sm:flex-row items-stretch gap-4 w-full">
+        {/* Player Score Boxes - Always vertical, max-w-35% */}
+        <div className="flex flex-col gap-3 w-full sm:max-w-[35%]">
+          <div className={`flex flex-col items-center justify-center w-full h-16 md:h-20 rounded-lg transition-all border-2 ${
             currentPlayer === 1 ? 'bg-blue-100 border-blue-400' : 'bg-gray-50 border-gray-300'
           }`}>
             <h2 className="text-xs font-semibold text-gray-700 truncate leading-tight">{players.player1.name}</h2>
@@ -72,7 +71,7 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
               <div className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600">{players.player1.score}</div>
             )}
           </div>
-          <div className={`flex flex-col items-center justify-center w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg transition-all border-2 ${
+          <div className={`flex flex-col items-center justify-center w-full h-16 md:h-20 rounded-lg transition-all border-2 ${
             currentPlayer === 2 ? 'bg-purple-100 border-purple-400' : 'bg-gray-50 border-gray-300'
           }`}>
             <h2 className="text-xs font-semibold text-gray-700 truncate leading-tight">{players.player2.name}</h2>
@@ -90,8 +89,8 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
         </div>
 
         {/* Enhanced Current Word Display to the Right */}
-        <div className="flex-1">
-          <div className={`p-3 rounded-lg border-2 ${
+        <div className="flex-1 w-full">
+          <div className={`p-3 rounded-lg border-2 h-full flex flex-col justify-center ${
             currentPlayer === 1 
               ? 'bg-blue-50 border-blue-200 text-blue-800' 
               : 'bg-purple-50 border-purple-200 text-purple-800'
