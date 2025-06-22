@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Edit3, Save, X, ArrowRightLeft } from 'lucide-react';
 import { Player, ValidationResult } from '../types/game';
-import TileDistributionModal from './TileDistributionModal';
 
 interface ScoreDisplayProps {
   players: {
@@ -16,6 +14,7 @@ interface ScoreDisplayProps {
   usedTiles?: number;
   onSwitchTurn?: () => void;
   canSwitchTurn?: boolean;
+  editingScores?: boolean;
 }
 
 const ScoreDisplay: React.FC<ScoreDisplayProps> = ({ 
@@ -27,35 +26,30 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   validationResult,
   usedTiles = 0,
   onSwitchTurn,
-  canSwitchTurn = true
+  canSwitchTurn = true,
+  editingScores = false
 }) => {
-  const [editingScores, setEditingScores] = useState(false);
-  const [showTileModal, setShowTileModal] = useState(false);
   const [tempScores, setTempScores] = useState({
     player1: players.player1.score,
     player2: players.player2.score
   });
 
-  const startEditingScores = () => {
-    setTempScores({
-      player1: players.player1.score,
-      player2: players.player2.score
-    });
-    setEditingScores(true);
-  };
+  // Update temp scores when editing starts
+  React.useEffect(() => {
+    if (editingScores) {
+      setTempScores({
+        player1: players.player1.score,
+        player2: players.player2.score
+      });
+    }
+  }, [editingScores, players.player1.score, players.player2.score]);
 
-  const saveScores = () => {
-    onScoresUpdate(tempScores);
-    setEditingScores(false);
-  };
-
-  const cancelEditingScores = () => {
-    setTempScores({
-      player1: players.player1.score,
-      player2: players.player2.score
-    });
-    setEditingScores(false);
-  };
+  // Save scores when editing ends
+  React.useEffect(() => {
+    if (!editingScores && tempScores.player1 !== players.player1.score || tempScores.player2 !== players.player2.score) {
+      onScoresUpdate(tempScores);
+    }
+  }, [editingScores]);
 
   return (
     <div className="mb-6 flex items-center gap-4">
@@ -97,115 +91,83 @@ const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 
         {/* Enhanced Current Word Display to the Right */}
         <div className="flex-1">
-          {currentWord && currentPoints !== undefined && (
-            <div className={`p-3 rounded-lg border-2 ${
-              currentPlayer === 1 
-                ? 'bg-blue-50 border-blue-200 text-blue-800' 
-                : 'bg-purple-50 border-purple-200 text-purple-800'
-            }`}>
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-sm font-bold">{currentWord}</div>
-                <div className="font-bold text-lg">{currentPoints} points</div>
-              </div>
-              
-              {validationResult && (
-                <div className="space-y-1 text-sm">
-                  {/* Pronunciation and Part of Speech */}
-                  {(validationResult.pronunciation || validationResult.partOfSpeech) && (
-                    <div className="flex items-center gap-2 text-xs opacity-75">
-                      {validationResult.pronunciation && (
-                        <span className="font-mono bg-white/50 px-2 py-1 rounded">
-                          {validationResult.pronunciation}
-                        </span>
-                      )}
-                      {validationResult.partOfSpeech && (
-                        <span className="italic">
-                          {validationResult.partOfSpeech}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Definition */}
-                  {validationResult.definition && (
-                    <div className="text-xs opacity-90 line-clamp-2">
-                      {validationResult.definition}
-                    </div>
-                  )}
-                  
-                  {/* Etymology/Origin */}
-                  {validationResult.origin && (
-                    <div className="text-xs opacity-75 italic">
-                      Origin: {validationResult.origin.length > 50 
-                        ? `${validationResult.origin.substring(0, 50)}...` 
-                        : validationResult.origin}
-                    </div>
+          <div className={`p-3 rounded-lg border-2 ${
+            currentPlayer === 1 
+              ? 'bg-blue-50 border-blue-200 text-blue-800' 
+              : 'bg-purple-50 border-purple-200 text-purple-800'
+          }`}>
+            {currentWord && currentPoints !== undefined ? (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-sm font-bold">{currentWord}</div>
+                  <div className="font-bold text-lg">{currentPoints} points</div>
+                  {/* Speaker Icon */}
+                  {validationResult?.pronunciation && (
+                    <button
+                      onClick={() => {
+                        if ('speechSynthesis' in window) {
+                          const utterance = new SpeechSynthesisUtterance(currentWord);
+                          utterance.rate = 0.8;
+                          speechSynthesis.speak(utterance);
+                        }
+                      }}
+                      className="ml-2 p-1 rounded-full hover:bg-white/50 transition-colors"
+                      title="Pronounce word"
+                    >
+                      🔊
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+                
+                {validationResult && (
+                  <div className="space-y-1 text-sm">
+                    {/* Pronunciation and Part of Speech */}
+                    {(validationResult.pronunciation || validationResult.partOfSpeech) && (
+                      <div className="flex items-center gap-2 text-xs opacity-75">
+                        {validationResult.pronunciation && (
+                          <span className="font-mono bg-white/50 px-2 py-1 rounded">
+                            {validationResult.pronunciation}
+                          </span>
+                        )}
+                        {validationResult.partOfSpeech && (
+                          <span className="italic">
+                            {validationResult.partOfSpeech}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Definition */}
+                    {validationResult.definition && (
+                      <div className="text-xs opacity-90 line-clamp-2">
+                        {validationResult.definition}
+                      </div>
+                    )}
+                    
+                    {/* Etymology/Origin */}
+                    {validationResult.origin && (
+                      <div className="text-xs opacity-75 italic">
+                        Origin: {validationResult.origin.length > 50 
+                          ? `${validationResult.origin.substring(0, 50)}...` 
+                          : validationResult.origin}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Placeholder content when no word */
+              <div className="text-center py-4">
+                <div className="text-sm font-medium mb-2">📚 Word Information</div>
+                <div className="text-xs opacity-60">
+                  Type letters in the tiles below to see word definitions, pronunciation, and etymology
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
       </div>
-      
-      {/* Right-justified Controls */}
-      <div className="flex-shrink-0 flex flex-col gap-2 items-end">
-        {/* Tile Distribution Pill */}
-        <button 
-          onClick={() => setShowTileModal(true)}
-          className="text-sm text-gray-600 bg-white px-3 py-1 rounded-full border hover:bg-gray-50 transition-colors cursor-pointer"
-          title="View remaining tiles"
-        >
-          📦 {98 - 14 - usedTiles} left
-        </button>
-        
-        {/* Edit Button */}
-        {editingScores ? (
-          <div className="flex gap-1">
-            <button
-              onClick={saveScores}
-              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              title="Save scores"
-            >
-              <Save className="w-4 h-4" />
-            </button>
-            <button
-              onClick={cancelEditingScores}
-              className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              title="Cancel editing"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={startEditingScores}
-            className="p-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-            title="Edit scores"
-          >
-            <Edit3 className="w-4 h-4" />
-          </button>
-        )}
-        
-        {/* Switch Player Button */}
-        {onSwitchTurn && (
-          <button
-            onClick={onSwitchTurn}
-            disabled={!canSwitchTurn}
-            className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400 transition-colors"
-            title="Switch turn"
-          >
-            <ArrowRightLeft className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-      
-      {/* Tile Distribution Modal */}
-      <TileDistributionModal 
-        isOpen={showTileModal} 
-        onClose={() => setShowTileModal(false)} 
-      />
     </div>
   );
 };

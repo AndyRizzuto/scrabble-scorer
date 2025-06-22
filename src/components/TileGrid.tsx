@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { RotateCcw, Users, User } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import TileInput from './TileInput';
 import { calculateWordValue, calculateBonusPoints, validateWord } from '../utils/scoring';
 import { ValidationResult, GameHistoryEntry } from '../types/game';
@@ -9,14 +9,16 @@ interface TileGridProps {
   onClear: () => void;
   onWordChange?: (word: string, points: number, tiles?: number) => void;
   onValidationChange?: (result: ValidationResult | null) => void;
-  onToggleMultiWordMode?: () => void;
-  showMultiWordMode?: boolean;
   recentPlays?: GameHistoryEntry[];
   players?: {
     player1: { name: string };
     player2: { name: string };
   };
   onResetGame?: () => void;
+  currentTurnWords?: Array<{word: string; points: number; definition?: string}>;
+  onRemoveWord?: (index: number) => void;
+  onWordClick?: (word: string, definition?: string) => void;
+  restoreToTiles?: string;
 }
 
 const TileGrid: React.FC<TileGridProps> = ({ 
@@ -24,11 +26,13 @@ const TileGrid: React.FC<TileGridProps> = ({
   onClear, 
   onWordChange, 
   onValidationChange,
-  onToggleMultiWordMode,
-  showMultiWordMode = false,
   recentPlays = [],
   players,
-  onResetGame
+  onResetGame,
+  currentTurnWords = [],
+  onRemoveWord,
+  onWordClick,
+  restoreToTiles
 }) => {
   const [letters, setLetters] = useState<string[]>(new Array(7).fill(''));
   const [multipliers, setMultipliers] = useState<number[]>(new Array(7).fill(1));
@@ -63,6 +67,33 @@ const TileGrid: React.FC<TileGridProps> = ({
       onWordChange(word, points, usedTiles);
     }
   }, [letters, multipliers, wordMultiplier, onWordChange]);
+
+  // Restore word to tiles when restoreToTiles prop changes
+  useEffect(() => {
+    if (restoreToTiles && restoreToTiles.length > 0) {
+      const newLetters = new Array(7).fill('');
+      const wordLetters = restoreToTiles.split('');
+      
+      // Place letters starting from index 0
+      wordLetters.forEach((letter, index) => {
+        if (index < 7) {
+          newLetters[index] = letter;
+        }
+      });
+      
+      setLetters(newLetters);
+      setCurrentFocus(wordLetters.length < 7 ? wordLetters.length : 0);
+      // Reset multipliers and word multiplier
+      setMultipliers(new Array(7).fill(1));
+      setWordMultiplier(1);
+      setValidationResult(null);
+      
+      // Trigger validation for the restored word
+      if (restoreToTiles.length >= 2) {
+        validateWordAsync(restoreToTiles);
+      }
+    }
+  }, [restoreToTiles]);
 
   const handleLetterChange = (index: number, letter: string) => {
     const newLetters = [...letters];
@@ -130,7 +161,8 @@ const TileGrid: React.FC<TileGridProps> = ({
     const word = getCurrentWord();
     const points = calculateCurrentPoints();
     
-    if (word && points > 0) {
+    // Only allow adding valid words
+    if (word && points > 0 && validationResult?.valid) {
       onAddWord(word, points);
       handleClear();
     }
@@ -177,6 +209,33 @@ const TileGrid: React.FC<TileGridProps> = ({
             </button>
           </div>
           
+          {/* Word Shelf - Current Turn Words */}
+          {currentTurnWords.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {currentTurnWords.map((wordEntry, index) => (
+                <div
+                  key={index}
+                  className="group flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer text-xs"
+                  onClick={() => onWordClick?.(wordEntry.word, wordEntry.definition)}
+                >
+                  <span className="font-mono">{wordEntry.word}</span>
+                  <span className="text-gray-500">+{wordEntry.points}</span>
+                  {onRemoveWord && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveWord(index);
+                      }}
+                      className="ml-1 w-3 h-3 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
           {usedTiles === 7 && (
             <div className={`px-3 py-1 rounded-full text-sm font-bold border transition-all duration-300 ${
               showConfetti 
@@ -188,22 +247,6 @@ const TileGrid: React.FC<TileGridProps> = ({
           )}
         </div>
 
-        {/* Compact Action Icons */}
-        <div className="flex items-center space-x-2">
-          {onToggleMultiWordMode && (
-            <button
-              onClick={onToggleMultiWordMode}
-              className={`p-1.5 rounded-lg transition-colors ${
-                showMultiWordMode 
-                  ? 'bg-orange-600 text-white hover:bg-orange-700' 
-                  : 'bg-orange-200 text-orange-700 hover:bg-orange-300'
-              }`}
-              title={showMultiWordMode ? 'Exit multi-word mode' : 'Enable multi-word mode'}
-            >
-              {showMultiWordMode ? <User className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Tile Grid */}
@@ -249,26 +292,27 @@ const TileGrid: React.FC<TileGridProps> = ({
           
           <button
             onClick={handleAddWord}
-            disabled={!currentWord || isValidating}
+            disabled={!currentWord || isValidating || !validationResult?.valid}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 transition-colors font-medium touch-manipulation text-sm"
           >
             {isValidating ? 'Checking...' : 'Add Word'}
           </button>
-
-          {onResetGame && (
-            <button
-              onClick={onResetGame}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors font-medium touch-manipulation text-sm"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Reset Game</span>
-            </button>
-          )}
         </div>
 
         {/* Recent Plays - Right Side with 4 Columns (75% width) */}
         <div className="col-span-3 bg-gray-50 rounded-lg p-3 border">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">Recent Plays</h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold text-gray-700">Recent Plays</h4>
+            {onResetGame && (
+              <button
+                onClick={onResetGame}
+                className="text-xs text-red-600 hover:text-red-800 underline transition-colors"
+                title="Reset game"
+              >
+                reset
+              </button>
+            )}
+          </div>
           
           {recentPlays.length === 0 ? (
             <div className="text-xs text-gray-500 italic text-center py-4">No plays yet</div>
