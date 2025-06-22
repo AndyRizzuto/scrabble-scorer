@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, BarChart3, RotateCcw, Edit3, ArrowRightLeft } from 'lucide-react';
+import { Users, BarChart3, RotateCcw, Edit3, ArrowRightLeft, Trophy } from 'lucide-react';
 import { 
   Player, 
   SetupData, 
@@ -16,6 +16,7 @@ import TileGrid from './TileGrid';
 import MultiWordTurn from './MultiWordTurn';
 import TileDistributionModal from './TileDistributionModal';
 import TurnTimer from './TurnTimer';
+import Timeline from './Timeline';
 
 const ResponsiveTimer: React.FC<{ isActive: boolean; onTimerExpired?: () => void }> = ({ isActive, onTimerExpired }) => {
   const [collapsed, setCollapsed] = React.useState(window.innerWidth < 640);
@@ -64,14 +65,43 @@ const ScrabbleScorer: React.FC = () => {
   const [gameHistory, setGameHistory] = useState<GameHistoryEntry[]>([]);
   const [currentTurnWords, setCurrentTurnWords] = useState<WordEntry[]>([]);
   
-  // Game wins tracking
+  // Game wins tracking - Preloaded with test data
+  const generateTestData = () => {
+    const now = Date.now();
+    const threeDaysAgo = now - (3 * 24 * 60 * 60 * 1000);
+    const threeWeeksAgo = now - (21 * 24 * 60 * 60 * 1000);
+    
+    // Generate 10 wins for Carla (player2) across 6 random days in last 3 weeks
+    const carlaWins = [];
+    const daysWithGames = [];
+    
+    // Pick 6 random days in the last 3 weeks
+    for (let i = 0; i < 6; i++) {
+      const randomDay = Math.floor(Math.random() * 21); // 0-20 days ago
+      const dayTimestamp = now - (randomDay * 24 * 60 * 60 * 1000);
+      daysWithGames.push(dayTimestamp);
+    }
+    
+    // Distribute 10 wins across these 6 days
+    const winsPerDay = [2, 2, 2, 1, 2, 1]; // Adds up to 10
+    daysWithGames.forEach((dayTimestamp, index) => {
+      for (let j = 0; j < winsPerDay[index]; j++) {
+        // Add some random hours/minutes to spread games throughout the day
+        const gameTime = dayTimestamp + (Math.random() * 12 * 60 * 60 * 1000); // Random time within 12 hours
+        carlaWins.push(gameTime);
+      }
+    });
+    
+    return {
+      player1: [], // Andrew has no wins
+      player2: carlaWins.sort((a, b) => a - b) // Sort chronologically
+    };
+  };
+  
   const [gameWins, setGameWins] = useState<{
     player1: number[];
     player2: number[];
-  }>({
-    player1: [],
-    player2: []
-  });
+  }>(generateTestData());
   
   // Current word/points state for display
   const [currentWord, setCurrentWord] = useState('');
@@ -81,7 +111,7 @@ const ScrabbleScorer: React.FC = () => {
   
   // UI state
   const [showSetupModal, setShowSetupModal] = useState(true);
-  const [currentPage, setCurrentPage] = useState<'game' | 'timeline'>('game');
+  const [currentPage, setCurrentPage] = useState<'game' | 'score' | 'timeline'>('timeline');
   const [selectedWordDefinition, setSelectedWordDefinition] = useState<{word: string; definition?: string} | null>(null);
   const [restoreToTiles, setRestoreToTiles] = useState<string>('');
   const [editingScores, setEditingScores] = useState(false);
@@ -220,6 +250,27 @@ const ScrabbleScorer: React.FC = () => {
     }
   };
 
+  const handleCreateGame = () => {
+    setCurrentPage('game');
+    setShowSetupModal(true);
+  };
+
+  const handleCloseSetup = () => {
+    setShowSetupModal(false);
+    // If no active game, go to timeline
+    if (!hasCurrentGame) {
+      setCurrentPage('timeline');
+    }
+  };
+
+  const handleGameClick = (gameId: string) => {
+    // Switch to score sheet and show that specific game
+    setCurrentPage('score');
+  };
+
+  const hasExistingGames = gameWins.player1.length > 0 || gameWins.player2.length > 0;
+  const hasCurrentGame = gameHistory.length > 0 || players.player1.score > 0 || players.player2.score > 0;
+
   const switchTurn = () => {
     setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
     setTimerActive(true);
@@ -258,13 +309,17 @@ const ScrabbleScorer: React.FC = () => {
     <div className="max-w-2xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
       {/* Setup Modal */}
       {showSetupModal && (
-        <GameSetup onSetupSubmit={handleSetupSubmit} />
+        <GameSetup 
+          onSetupSubmit={handleSetupSubmit} 
+          onClose={hasExistingGames ? handleCloseSetup : undefined}
+          canClose={hasExistingGames}
+        />
       )}
 
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className="flex items-center justify-center">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center">
               {/* Prominent logo with fallback title */}
               <LogoWithFallback />
             </div>
@@ -273,73 +328,81 @@ const ScrabbleScorer: React.FC = () => {
                 onClick={() => setCurrentPage('game')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === 'game' 
-                    ? 'bg-blue-600 text-white' 
+                    ? (hasCurrentGame ? 'bg-blue-600 text-white' : 'bg-green-600 text-white')
+                    : (hasCurrentGame ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-green-100 text-green-700 hover:bg-green-200')
+                }`}
+              >
+                {hasCurrentGame ? 'Game' : 'New Game'}
+              </button>
+              <button
+                onClick={() => setCurrentPage('score')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === 'score' 
+                    ? 'bg-green-600 text-white' 
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                Game
+                <span style={{fontFamily: 'cursive'}}>Score</span>
               </button>
               <button
                 onClick={() => setCurrentPage('timeline')}
-                disabled={gameHistory.length === 0}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === 'timeline' 
                     ? 'bg-purple-600 text-white' 
-                    : gameHistory.length === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                <BarChart3 className="w-4 h-4" />
                 Timeline
               </button>
             </div>
           </div>
           
-          {/* Header Controls Row */}
-          <div className="flex items-center justify-center gap-4 mb-4">
-            {/* Edit Score Button */}
-            <button
-              onClick={handleToggleEditScores}
-              className={`p-3 rounded-lg transition-colors ${
-                editingScores 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-yellow-600 hover:bg-yellow-700'
-              } text-white`}
-              title={editingScores ? 'Save scores' : 'Edit scores'}
-            >
-              <Edit3 className="w-5 h-5" />
-            </button>
-            
-            {/* Switch Player Button */}
-            <button
-              onClick={switchTurn}
-              disabled={currentTurnWords.length > 0}
-              className="p-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400 transition-colors"
-              title="Switch turn"
-            >
-              <ArrowRightLeft className="w-5 h-5" />
-            </button>
-            
-            {/* Tile Distribution Pill - Responsive */}
-            <button 
-              onClick={() => setShowTileModal(true)}
-              className="text-base text-gray-600 bg-white px-6 py-3 rounded-full border hover:bg-gray-50 transition-colors cursor-pointer h-12 flex items-center min-w-[64px] whitespace-nowrap
-                sm:px-4 sm:text-sm
-                md:px-6 md:text-base"
-              title="View remaining tiles"
-            >
-              {98 - 14 - usedTiles} in bag
-            </button>
-            
-            {/* Turn Timer - Collapsible on small screens */}
-            {currentPage === 'game' && (
-              <ResponsiveTimer isActive={timerActive} onTimerExpired={() => {
-                // Optional: auto-switch turn when timer expires
-                console.log('Timer expired for', players[`player${currentPlayer}`].name);
-              }} />
-            )}
-          </div>
+          {/* Header Controls Row - Only show on Game and Score pages */}
+          {currentPage !== 'timeline' && (
+            <div className="flex items-center justify-center gap-4 mb-4">
+              {/* Edit Score Button */}
+              <button
+                onClick={handleToggleEditScores}
+                className={`p-3 rounded-lg transition-colors ${
+                  editingScores 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-yellow-600 hover:bg-yellow-700'
+                } text-white`}
+                title={editingScores ? 'Save scores' : 'Edit scores'}
+              >
+                <Edit3 className="w-5 h-5" />
+              </button>
+              
+              {/* Switch Player Button */}
+              <button
+                onClick={switchTurn}
+                disabled={currentTurnWords.length > 0}
+                className="p-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400 transition-colors"
+                title="Switch turn"
+              >
+                <ArrowRightLeft className="w-5 h-5" />
+              </button>
+              
+              {/* Tile Distribution Pill - Responsive */}
+              <button 
+                onClick={() => setShowTileModal(true)}
+                className="text-base text-gray-600 bg-white px-6 py-3 rounded-full border hover:bg-gray-50 transition-colors cursor-pointer h-12 flex items-center min-w-[64px] whitespace-nowrap
+                  sm:px-4 sm:text-sm
+                  md:px-6 md:text-base"
+                title="View remaining tiles"
+              >
+                {98 - 14 - usedTiles} in bag
+              </button>
+              
+              {/* Turn Timer - Collapsible on small screens */}
+              {currentPage === 'game' && (
+                <ResponsiveTimer isActive={timerActive} onTimerExpired={() => {
+                  // Optional: auto-switch turn when timer expires
+                  console.log('Timer expired for', players[`player${currentPlayer}`].name);
+                }} />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Show Score Display only on Game page */}
@@ -361,6 +424,14 @@ const ScrabbleScorer: React.FC = () => {
         )}
 
         {currentPage === 'timeline' ? (
+          <Timeline 
+            players={players}
+            gameHistory={gameHistory}
+            gameWins={gameWins}
+            onCreateGame={handleCreateGame}
+            onGameClick={handleGameClick}
+          />
+        ) : currentPage === 'score' ? (
           // Timeline Page - Paper Score Sheet Style
           <div>
             <div className="mb-6">
@@ -368,9 +439,62 @@ const ScrabbleScorer: React.FC = () => {
             </div>
 
             {gameHistory.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p>No games played yet. Start playing to see the score sheet!</p>
+              // Show empty score sheet with today's date
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-6 shadow-lg" style={{
+                backgroundImage: `repeating-linear-gradient(
+                  transparent,
+                  transparent 24px,
+                  #e5e7eb 24px,
+                  #e5e7eb 25px
+                )`,
+                minHeight: '400px',
+                fontFamily: 'cursive'
+              }}>
+                {/* Date Header */}
+                <div className="text-center mb-6 pb-4 border-b-2 border-gray-400">
+                  <div className="text-lg font-bold text-gray-600" style={{fontFamily: 'cursive'}}>
+                    {new Date().toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </div>
+                </div>
+
+                {/* Player Name Headers */}
+                <div className="grid grid-cols-2 gap-8 mb-6 pb-4 border-b-2 border-gray-400">
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-blue-700 underline" style={{fontFamily: 'cursive'}}>
+                      {players.player1.name}
+                    </h3>
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-purple-700 underline" style={{fontFamily: 'cursive'}}>
+                      {players.player2.name}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Empty scores with 0's */}
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="text-center">
+                    <div className="text-center font-bold text-2xl text-blue-700 bg-blue-50 rounded px-2 py-1" style={{fontFamily: 'cursive'}}>
+                      0
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-center font-bold text-2xl text-purple-700 bg-purple-50 rounded px-2 py-1" style={{fontFamily: 'cursive'}}>
+                      0
+                    </div>
+                  </div>
+                </div>
+
+                {/* Message */}
+                <div className="text-center mt-8 text-gray-500" style={{fontFamily: 'cursive'}}>
+                  <p className="text-lg">Ready to start a new game!</p>
+                  <p className="text-sm mt-2">Click "New Game" to begin scoring</p>
+                </div>
               </div>
             ) : (
               // Paper-style scoring sheet
@@ -564,11 +688,11 @@ const ScrabbleScorer: React.FC = () => {
 const LogoWithFallback: React.FC = () => {
   const [showFallback, setShowFallback] = React.useState(false);
   return showFallback ? (
-    <span className="text-4xl font-extrabold tracking-tight text-blue-700 drop-shadow-lg">SKORE</span>
+    <span className="text-4xl font-extrabold tracking-tight text-blue-700 drop-shadow-lg">SKOREBORED</span>
   ) : (
     <img
       src="/logo.svg"
-      alt="SKORE"
+      alt="SKOREBORED"
       className="h-24 w-auto max-w-xs mx-auto drop-shadow-xl"
       style={{ minHeight: 64 }}
       onError={() => setShowFallback(true)}

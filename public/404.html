@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+    <script>
+        // GitHub Pages redirect handling
+        // Check if we're on the bare directory path and redirect to index.html
+        if (window.location.pathname === '/scrabble-scorer/' || window.location.pathname === '/scrabble-scorer') {
+            window.location.replace('/scrabble-scorer/index.html');
+        } else {
+            // For other 404s, also redirect to index.html (SPA behavior)
+            window.location.replace('/scrabble-scorer/index.html');
+        }
+    </script>
+</head>
+<body>
+    <p>Redirecting...</p>
+</body>
+</html>

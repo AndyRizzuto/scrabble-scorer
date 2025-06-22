@@ -8,4 +8,5 @@ export { default as TileDistributionModal } from './TileDistributionModal';
 export { default as WordInput } from './WordInput';
 export { default as LetterTiles } from './LetterTiles';
 export { default as MultiWordTurn } from './MultiWordTurn';
+export { default as Timeline } from './Timeline';
 
