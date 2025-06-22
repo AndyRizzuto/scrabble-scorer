@@ -4,13 +4,13 @@
 
 ### Sprint 1: Core Game Experience
 **Goal:** Polish the main game flow and fix critical usability issues.
-- [ ] Fix keyboard input (focus, shortcuts, mobile)
-- [ ] **Fix “Complete Turn” button logic and UX**
-    - [ ] Ensure button always adds the current valid word (if present) and completes the turn
-    - [ ] Disable button if input is not empty and not valid
-    - [ ] All words (from shelf and input) are saved and displayed in recent plays
-    - [ ] Add clear feedback for users if the button is disabled (e.g., tooltip or helper text)
-    - [ ] Add tests for edge cases (multi-word, empty input, invalid input)
+- [x] Fix keyboard input (focus, shortcuts, mobile)
+- [x] **Fix “Complete Turn” button logic and UX**
+    - [x] Ensure button always adds the current valid word (if present) and completes the turn
+    - [x] Disable button if input is not empty and not valid
+    - [x] All words (from shelf and input) are saved and displayed in recent plays
+    - [x] Add clear feedback for users if the button is disabled (e.g., tooltip or helper text)
+    - [x] Add tests for edge cases (multi-word, empty input, invalid input)
 - [ ] **LetterBag: show tile score & count**
     - [ ] Update LetterBag UI so each tile displays both its letter score and the count of remaining tiles
     - [ ] Make the display visually clear and accessible (color, font size, layout)
@@ -18,6 +18,10 @@
     - [ ] Add tests for tile count and score updates
 - [ ] Remove reset button from game page (move to timeline)
 - [ ] Timer: auto-start, unpause on play, sync with game state
+- [x] Add Storybook and stories for all major components
+- [x] Integrate app CSS (Tailwind) into Storybook for visual parity
+- [ ] Polish Storybook stories (add controls, actions, docs)
+- [ ] Finalize and stabilize automated tests for CI
 
 ### Sprint 2: Score Sheet & Readability
 **Goal:** Make the score page clear, beautiful, and easy to use.

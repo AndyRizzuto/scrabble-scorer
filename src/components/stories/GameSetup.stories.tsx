@@ -1,11 +1,23 @@
 import React from 'react';
+import type { Meta, StoryObj } from '@storybook/react';
 import GameSetup from '../game/GameSetup';
 import { SetupData } from '../../types/game';
 
-export default {
+const meta: Meta<typeof GameSetup> = {
   title: 'Game/GameSetup',
   component: GameSetup,
+  parameters: {
+    docs: {
+      description: {
+        component: 'GameSetup collects player names and starting scores before a game begins.'
+      }
+    }
+  },
+  tags: ['autodocs'],
 };
+export default meta;
+
+type Story = StoryObj<typeof GameSetup>;
 
 const defaultSetup: SetupData = {
   player1Name: 'Alice',
@@ -14,6 +26,16 @@ const defaultSetup: SetupData = {
   player2Score: 0,
 };
 
-export const Default = () => (
-  <GameSetup onSetupSubmit={() => {}} canClose={true} />
-);
+export const Default: Story = {
+  args: {
+    onSetupSubmit: () => {},
+    canClose: true,
+  },
+  parameters: {
+    docs: {
+      source: {
+        code: `<GameSetup onSetupSubmit={() => {}} canClose={true} />`,
+      },
+    },
+  },
+};

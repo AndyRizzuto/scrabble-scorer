@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar, Trophy, TrendingUp, BarChart3, Plus, Play, Pause, CheckCircle } from 'lucide-react';
-import { Player, GameHistoryEntry, Game } from '../types/game';
+import { Player, GameHistoryEntry, Game } from '../../types/game';
 
 interface GameSession {
   id: string;
@@ -38,7 +38,7 @@ const Timeline: React.FC<TimelineProps> = ({ players, gameHistory, gameWins, gam
       date: new Date(game.startTime),
       player1Score: game.players.player1.score,
       player2Score: game.players.player2.score,
-      winner: game.winner,
+      winner: game.winner !== undefined ? game.winner : null,
       duration: formatDuration(getGameDuration(game)),
       totalWords: game.gameHistory.filter(h => !h.isTurnSummary).length,
       status: game.status
