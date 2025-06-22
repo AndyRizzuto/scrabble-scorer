@@ -11,7 +11,13 @@ import { ValidationResult, GameHistoryEntry } from '../types/game';
 import { useWordValidation } from '../hooks/useWordValidation';
 
 interface TileGridProps {
-  onAddWord: (word: string, points: number) => void;
+  onAddWord: (word: string, points: number, wordData?: Partial<{
+    basePoints: number;
+    bonusPoints: number;
+    bonuses: {letterMultiplier: number; wordMultiplier: number};
+    letterMultipliers: number[];
+    bingoBonus: boolean;
+  }>) => void;
   onClear: () => void;
   onWordChange?: (word: string, points: number, tiles?: number) => void;
   onValidationChange?: (result: ValidationResult | null) => void;
@@ -22,10 +28,15 @@ interface TileGridProps {
   };
   onResetGame?: () => void;
   currentTurnWords?: Array<{word: string; points: number; definition?: string}>;
-  onRemoveWord?: (index: number) => void;
+  onRemoveWord?: (index: number, currentWordInfo?: {word: string, points: number, isValid: boolean}) => void;
   onWordClick?: (word: string, definition?: string) => void;
   restoreToTiles?: string;
+  restoreMultipliers?: {
+    letterMultipliers: number[];
+    wordMultiplier: number;
+  };
   onCompleteTurn?: () => void;
+  onUndoTurn?: (turnIndex: number) => void;
 }
 
 const TileGrid: React.FC<TileGridProps> = ({ 
@@ -40,7 +51,9 @@ const TileGrid: React.FC<TileGridProps> = ({
   onRemoveWord,
   onWordClick,
   restoreToTiles,
-  onCompleteTurn
+  restoreMultipliers,
+  onCompleteTurn,
+  onUndoTurn
 }) => {
   const [letters, setLetters] = useState<string[]>(new Array(7).fill(''));
   const [multipliers, setMultipliers] = useState<number[]>(new Array(7).fill(1));
@@ -90,9 +103,16 @@ const TileGrid: React.FC<TileGridProps> = ({
       
       setLetters(newLetters);
       setCurrentFocus(wordLetters.length < 7 ? wordLetters.length : 0);
-      // Reset multipliers and word multiplier
-      setMultipliers(new Array(7).fill(1));
-      setWordMultiplier(1);
+      
+      // Restore multipliers if provided, otherwise reset
+      if (restoreMultipliers) {
+        setMultipliers(restoreMultipliers.letterMultipliers.slice(0, 7).concat(new Array(Math.max(0, 7 - restoreMultipliers.letterMultipliers.length)).fill(1)));
+        setWordMultiplier(restoreMultipliers.wordMultiplier);
+      } else {
+        setMultipliers(new Array(7).fill(1));
+        setWordMultiplier(1);
+      }
+      
       setValidationResult(null);
       
       // Trigger validation for the restored word
@@ -100,7 +120,7 @@ const TileGrid: React.FC<TileGridProps> = ({
         validateWordAsync(restoreToTiles);
       }
     }
-  }, [restoreToTiles]);
+  }, [restoreToTiles, restoreMultipliers]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -194,10 +214,19 @@ const TileGrid: React.FC<TileGridProps> = ({
   const handleAddWord = () => {
     const word = getCurrentWord();
     const points = calculateCurrentPoints();
+    const basePoints = calculateWordValue(word);
+    const usedTiles = letters.filter(l => l !== '').length;
+    const isBingo = usedTiles === 7;
     
     // Only allow adding valid words
     if (word && points > 0 && validationResult?.valid) {
-      onAddWord(word, points);
+      onAddWord(word, points, {
+        basePoints,
+        bonusPoints: points - basePoints,
+        bonuses: { letterMultiplier: 1, wordMultiplier },
+        letterMultipliers: multipliers.slice(0, usedTiles),
+        bingoBonus: isBingo
+      });
       handleClear();
     }
   };

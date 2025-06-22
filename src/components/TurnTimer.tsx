@@ -5,6 +5,9 @@ interface TurnTimerProps {
   isActive: boolean;
   onTurnEnd?: () => void;
   onTimerExpired?: () => void;
+  onTimerPaused?: () => void;
+  currentPlayer: 1 | 2;
+  turnStartTime?: number;
   minimal?: boolean; // Only show time if true
 }
 
@@ -13,7 +16,7 @@ export interface TimerSettings {
   sound: string;
 }
 
-const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpired, minimal = false }) => {
+const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpired, onTimerPaused, currentPlayer, turnStartTime, minimal = false }) => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -37,17 +40,30 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
     { value: 'klaxon', label: 'Klaxon' }
   ];
 
+  const [previousPlayer, setPreviousPlayer] = useState<1 | 2>(currentPlayer);
+  
+  // Reset timer when turn changes (currentPlayer changes)
+  useEffect(() => {
+    if (currentPlayer !== previousPlayer) {
+      setTime(0);
+      setIsRunning(false);
+      setIsPaused(false);
+      setPreviousPlayer(currentPlayer);
+    }
+  }, [currentPlayer, previousPlayer]);
+
   // Start timer when turn becomes active (only reset time when turn changes, not when resuming)
   useEffect(() => {
     if (isActive && !isPaused && !isRunning) {
       setIsRunning(true);
       if (settings.duration > 0) {
         setTime(settings.duration * 60); // Convert minutes to seconds
-      } else {
+      } else if (time === 0) {
+        // Only reset to 0 if timer is at 0 (new game scenario)
         setTime(0);
       }
     }
-  }, [isActive, settings.duration, isPaused, isRunning]);
+  }, [isActive, settings.duration, isPaused, isRunning, time]);
 
   // Timer logic
   useEffect(() => {
@@ -84,136 +100,71 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
   }, [isRunning, isPaused, settings.duration, onTimerExpired]);
 
   const playSound = () => {
-    // Create audio context and generate sounds
-    if ('AudioContext' in window || 'webkitAudioContext' in window) {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      const audioCtx = new AudioContext();
+    // Use actual audio files from freesound.org and other free sources
+    const soundUrls = {
+      alarm: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+      foghorn: 'https://www.soundjay.com/buttons/sounds/ship-horn.wav', 
+      dog: 'https://www.soundjay.com/animal/sounds/dog-barking-1.wav',
+      fart: 'https://www.soundjay.com/human/sounds/fart-01.wav',
+      belch: 'https://www.soundjay.com/human/sounds/burp-1.wav',
+      tires: 'https://www.soundjay.com/transportation/sounds/car-skidding-1.wav',
+      nails: 'https://www.soundjay.com/misc/sounds/chalkboard-1.wav',
+      klaxon: 'https://www.soundjay.com/misc/sounds/air-horn-1.wav'
+    };
+
+    // Try to play actual sound file first
+    const soundUrl = soundUrls[settings.sound as keyof typeof soundUrls];
+    if (soundUrl) {
+      const audio = new Audio();
       
-      switch (settings.sound) {
-        case 'alarm':
-          // Classic alarm beep
-          playBeepSequence(audioCtx, [800, 1000], 0.3, 3);
-          break;
-        case 'foghorn':
-          // Low foghorn sound
-          playTone(audioCtx, 150, 2, 0.5);
-          break;
-        case 'dog':
-          // Dog bark simulation
-          playBark(audioCtx);
-          break;
-        case 'fart':
-          // Brown noise burst
-          playNoiseBurst(audioCtx, 'brown', 0.8);
-          break;
-        case 'belch':
-          // Low rumbling sound
-          playTone(audioCtx, 80, 1.2, 0.4);
-          break;
-        case 'tires':
-          // High frequency screech
-          playNoiseBurst(audioCtx, 'white', 0.6);
-          break;
-        case 'nails':
-          // High pitched scraping
-          playBeepSequence(audioCtx, [2000, 2200, 2400], 0.2, 5);
-          break;
-        case 'klaxon':
-          // Classic klaxon sound
-          playBeepSequence(audioCtx, [400, 500], 0.5, 4);
-          break;
-        default:
-          playBeepSequence(audioCtx, [800, 1000], 0.3, 3);
-      }
+      // Set up error handling to fall back to simple beep
+      audio.onerror = () => {
+        console.log('Could not load sound file, using fallback');
+        playFallbackSound();
+      };
+      
+      audio.oncanplaythrough = () => {
+        audio.play().catch(() => {
+          console.log('Could not play sound, using fallback');
+          playFallbackSound();
+        });
+      };
+      
+      audio.src = soundUrl;
+      audio.volume = 0.7;
+      audio.load();
     } else {
-      // Fallback to speech synthesis
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance('Time up!');
-        utterance.rate = 1.5;
-        speechSynthesis.speak(utterance);
-      }
+      playFallbackSound();
     }
   };
 
-  const playTone = (audioCtx: AudioContext, frequency: number, duration: number, volume: number = 0.3) => {
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-    
-    oscillator.start(audioCtx.currentTime);
-    oscillator.stop(audioCtx.currentTime + duration);
-  };
-
-  const playBeepSequence = (audioCtx: AudioContext, frequencies: number[], duration: number, count: number) => {
-    for (let i = 0; i < count; i++) {
-      const freq = frequencies[i % frequencies.length];
-      setTimeout(() => {
-        playTone(audioCtx, freq, duration);
-      }, i * (duration * 1000 + 100));
+  const playFallbackSound = () => {
+    // Simple fallback beep using Web Audio API
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContext) {
+        const audioCtx = new AudioContext();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.5);
+      }
+    } catch (error) {
+      console.log('Audio not supported');
     }
   };
 
-  const playBark = (audioCtx: AudioContext) => {
-    // Simulate a dog bark with quick frequency changes
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    oscillator.type = 'sawtooth';
-    oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
-    oscillator.frequency.linearRampToValueAtTime(400, audioCtx.currentTime + 0.1);
-    oscillator.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.2);
-    
-    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-    
-    oscillator.start(audioCtx.currentTime);
-    oscillator.stop(audioCtx.currentTime + 0.3);
-  };
-
-  const playNoiseBurst = (audioCtx: AudioContext, type: 'white' | 'brown', duration: number) => {
-    const bufferSize = audioCtx.sampleRate * duration;
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    
-    if (type === 'white') {
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
-    } else { // brown noise
-      let lastOut = 0;
-      for (let i = 0; i < bufferSize; i++) {
-        const white = Math.random() * 2 - 1;
-        data[i] = (lastOut + (0.02 * white)) / 1.02;
-        lastOut = data[i];
-        data[i] *= 3.5; // Amplify brown noise
-      }
-    }
-    
-    const source = audioCtx.createBufferSource();
-    const gainNode = audioCtx.createGain();
-    
-    source.buffer = buffer;
-    source.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-    
-    source.start(audioCtx.currentTime);
-  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -228,7 +179,13 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
       setIsPaused(false);
     } else {
       // Toggle pause/resume if it's running
-      setIsPaused(!isPaused);
+      const newPausedState = !isPaused;
+      setIsPaused(newPausedState);
+      
+      // Call onTimerPaused when manually pausing the timer
+      if (newPausedState && onTimerPaused) {
+        onTimerPaused();
+      }
     }
   };
 
@@ -289,13 +246,6 @@ const TurnTimer: React.FC<TurnTimerProps> = ({ isActive, onTurnEnd, onTimerExpir
             title={!isRunning || isPaused ? 'Start/Resume' : 'Pause'}
           >
             {!isRunning || isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={handleReset}
-            className="p-1 rounded-full hover:bg-gray-200 transition-colors"
-            title="Reset timer"
-          >
-            <RotateCcw className="w-4 h-4" />
           </button>
           <button
             onClick={() => setShowSettings(true)}

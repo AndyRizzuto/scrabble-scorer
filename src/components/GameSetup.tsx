@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import { SetupData } from '../types/game';
 
 interface GameSetupProps {
   onSetupSubmit: (data: SetupData) => void;
+  onClose?: () => void;
+  canClose?: boolean;
 }
 
-const GameSetup: React.FC<GameSetupProps> = ({ onSetupSubmit }) => {
+const GameSetup: React.FC<GameSetupProps> = ({ onSetupSubmit, onClose, canClose = false }) => {
   const [setupData, setSetupData] = useState<SetupData>({
     player1Name: 'Andrew',
     player2Name: 'Carla',
@@ -24,7 +27,16 @@ const GameSetup: React.FC<GameSetupProps> = ({ onSetupSubmit }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 relative">
+        {canClose && onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
         <h2 className="text-2xl font-bold text-center mb-6">Game Setup</h2>
         <div className="space-y-4">
           <div>

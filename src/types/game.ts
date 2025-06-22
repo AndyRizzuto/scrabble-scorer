@@ -26,6 +26,9 @@ export interface GameHistoryEntry {
   points: number;
   time: string;
   bonuses?: BonusMultipliers;
+  letterMultipliers?: number[];
+  bingoBonus?: boolean;
+  basePoints?: number;
   isTurnSummary?: boolean;
 }
 
@@ -54,5 +57,26 @@ export interface SetupData {
   player2Name: string;
   player1Score: number;
   player2Score: number;
+}
+
+export type GameStatus = 'active' | 'paused' | 'final';
+
+export interface Game {
+  id: string;
+  status: GameStatus;
+  startTime: number;
+  endTime?: number;
+  pausedTime: number; // Total time spent paused (milliseconds)
+  lastPauseStart?: number; // When current pause started
+  currentTurnStartTime?: number; // When current turn started
+  players: {
+    player1: Player;
+    player2: Player;
+  };
+  currentPlayer: 1 | 2;
+  gameHistory: GameHistoryEntry[];
+  currentTurnWords: WordEntry[];
+  winner?: 1 | 2 | null;
+  tilesRemaining: number;
 }
 
