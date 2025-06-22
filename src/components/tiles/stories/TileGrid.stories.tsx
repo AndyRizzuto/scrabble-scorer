@@ -1,10 +1,22 @@
 import React from 'react';
+import type { Meta, StoryObj } from '@storybook/react';
 import TileGrid from '../TileGrid';
 
-export default {
+const meta: Meta<typeof TileGrid> = {
   title: 'Tiles/TileGrid',
   component: TileGrid,
+  parameters: {
+    docs: {
+      description: {
+        component: 'TileGrid is the main word entry and scoring interface for each turn.',
+      },
+    },
+  },
+  tags: ['autodocs'],
 };
+export default meta;
+
+type Story = StoryObj<typeof TileGrid>;
 
 const baseProps = {
   onAddWord: () => alert('Add Word'),
@@ -15,12 +27,42 @@ const baseProps = {
   players: { player1: { name: 'Alice' }, player2: { name: 'Bob' } },
 };
 
-export const Default = () => <TileGrid {...baseProps} />;
+export const Default: Story = {
+  args: {
+    ...baseProps,
+  },
+  parameters: {
+    docs: {
+      source: {
+        code: `<TileGrid {...baseProps} />`,
+      },
+    },
+  },
+};
 
-export const WithShelfWords = () => (
-  <TileGrid {...baseProps} currentTurnWords={[{ word: 'HELLO', points: 12 }]} />
-);
+export const WithShelfWords: Story = {
+  args: {
+    ...baseProps,
+    currentTurnWords: [{ word: 'HELLO', points: 12 }],
+  },
+  parameters: {
+    docs: {
+      source: {
+        code: `<TileGrid {...baseProps} currentTurnWords={[{ word: 'HELLO', points: 12 }]} />`,
+      },
+    },
+  },
+};
 
-export const DisabledCompleteTurn = () => (
-  <TileGrid {...baseProps} />
-);
+export const DisabledCompleteTurn: Story = {
+  args: {
+    ...baseProps,
+  },
+  parameters: {
+    docs: {
+      source: {
+        code: `<TileGrid {...baseProps} />`,
+      },
+    },
+  },
+};

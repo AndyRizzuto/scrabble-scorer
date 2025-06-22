@@ -1,10 +1,22 @@
 import React from 'react';
+import type { Meta, StoryObj } from '@storybook/react';
 import ScoreSheet from '../score/ScoreSheet';
 
-export default {
+const meta: Meta<typeof ScoreSheet> = {
   title: 'Score/ScoreSheet',
   component: ScoreSheet,
+  parameters: {
+    docs: {
+      description: {
+        component: 'ScoreSheet displays the full game score sheet for both players, including win stats and game history.'
+      }
+    }
+  },
+  tags: ['autodocs'],
 };
+export default meta;
+
+type Story = StoryObj<typeof ScoreSheet>;
 
 const players = {
   player1: { name: 'Alice', score: 42 },
@@ -16,8 +28,19 @@ const gameHistory = [
   { player: 2, word: 'WORLD', points: 10, time: '2025-06-22T12:01:00Z' },
 ];
 
-const getWinStats = (playerKey) => ({ totalWins: 3, currentStreak: 2, hasFlame: playerKey === 'player1' });
+const getWinStats = (playerKey: 'player1' | 'player2') => ({ totalWins: 3, currentStreak: 2, hasFlame: playerKey === 'player1' });
 
-export const Default = () => (
-  <ScoreSheet players={players} gameHistory={gameHistory} getWinStats={getWinStats} />
-);
+export const Default: Story = {
+  args: {
+    players,
+    gameHistory,
+    getWinStats,
+  },
+  parameters: {
+    docs: {
+      source: {
+        code: `<ScoreSheet players={players} gameHistory={gameHistory} getWinStats={getWinStats} />`,
+      },
+    },
+  },
+};

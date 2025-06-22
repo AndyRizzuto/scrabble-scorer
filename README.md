@@ -3,14 +3,17 @@
 A modern, modular Scrabble scorekeeping app built with React and TypeScript.
 
 ## Table of Contents
-- [Overview](#overview)
-- [Project Structure](#project-structure)
-- [Components](#components)
-- [Logic](#logic)
-- [Data Model](#data-model)
-- [How It Works](#how-it-works)
-- [Development](#development)
-- [Further Reading](#further-reading)
+- [Scrabble Score Keeper](#scrabble-score-keeper)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Project Structure](#project-structure)
+  - [Components](#components)
+  - [Logic](#logic)
+  - [Data Model](#data-model)
+  - [How It Works](#how-it-works)
+  - [Development](#development)
+  - [Storybook \& UI Explorer](#storybook--ui-explorer)
+  - [Further Reading](#further-reading)
 
 ## Overview
 This app allows two players to keep score for a game of Scrabble, including support for multi-word turns, bonuses, and undoing turns. The codebase is fully typed and split into focused, reusable components.
@@ -51,6 +54,19 @@ See [`docs/data.md`](docs/data.md) for all TypeScript types and data flow docume
    npm run dev
    ```
 3. Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## Storybook & UI Explorer
+Storybook lets you visually explore, test, and document all UI components in isolation.
+
+1. Start Storybook:
+   ```sh
+   npm run storybook
+   ```
+2. Open [http://localhost:6006](http://localhost:6006) in your browser.
+3. Browse, interact with, and test all components (with real app CSS and Tailwind styles).
+
+- Storybook is great for onboarding, design review, and rapid UI iteration.
+- See stories in `src/components/stories/` and within each component folder.
 
 ## Further Reading
 - [Components Documentation](docs/components.md)
