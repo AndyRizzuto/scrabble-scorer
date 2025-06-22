@@ -527,7 +527,7 @@ const TileGrid: React.FC<TileGridProps> = ({
                                   const actualIdx = correspondingPlay?.letterMultipliers?.findIndex(m => m === mult) || 0;
                                   const letterValue = (LETTER_VALUES[word.word.charAt(actualIdx)] || 1);
                                   const bonus = letterValue * (mult - 1);
-                                  labels.push(`+ L×${mult}`);
+                                  labels.push(`+${word.word.charAt(actualIdx)}×${mult}`);
                                   values.push(bonus);
                                 });
                                 
@@ -547,7 +547,7 @@ const TileGrid: React.FC<TileGridProps> = ({
                                 
                                 // Add equals sign
                                 labels.push('=');
-                                values.push('');
+                                values.push(word.points);
                                 
                                 return (
                                   <div className="space-y-0.5">
@@ -575,7 +575,7 @@ const TileGrid: React.FC<TileGridProps> = ({
                                           idx === values.length - 1 ? 'text-gray-700 font-bold' :
                                           'text-gray-600'
                                         }`}>
-                                          {value === '' ? word.points : value}
+                                          {typeof value === 'string' && value === '' ? word.points : value}
                                         </div>
                                       ))}
                                     </div>
