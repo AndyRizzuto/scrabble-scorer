@@ -1,79 +1,38 @@
-# Scrabble Score Keeper
+# Scrabble Scorer
 
-A modern, modular Scrabble scorekeeping app built with React and TypeScript.
+A modern, user-friendly Scrabble scorekeeping app with a focus on clarity, speed, and beautiful UI.
 
-## Table of Contents
-- [Scrabble Score Keeper](#scrabble-score-keeper)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Project Structure](#project-structure)
-  - [Components](#components)
-  - [Logic](#logic)
-  - [Data Model](#data-model)
-  - [How It Works](#how-it-works)
-  - [Development](#development)
-  - [Storybook \& UI Explorer](#storybook--ui-explorer)
-  - [Further Reading](#further-reading)
+## Key Features
+- Fast, keyboard-driven scoring for two players
+- Multi-word turns, shelf, and undo support
+- Timeline/history with win stats and game details
+- Score sheet with clear, readable layout
+- Responsive design and mobile-friendly
+- Built with React, TypeScript, Vite, and Tailwind CSS
 
-## Overview
-This app allows two players to keep score for a game of Scrabble, including support for multi-word turns, bonuses, and undoing turns. The codebase is fully typed and split into focused, reusable components.
+## Storybook
+- All major UI components have Storybook stories, including header and game management components.
+- Stories include edge cases, actions, and autodocs for prop tables.
+- RecentPlays story is fully polished with controls and actions.
+- Controls checklist is in progress for all components—contributions welcome!
+- To run Storybook:
+  ```sh
+  npm run storybook
+  ```
 
-## Project Structure
-```
-src/
-  components/         # All React components
-  types/              # TypeScript interfaces and types
-  utils/              # Scoring and validation logic
-  assets/             # Images and static assets
-public/               # Static files
-```
+## Automated Tests
+- Automated tests cover all major game logic and UI flows.
+- Tests are stable and ready for CI integration.
 
-## Components
-See [`docs/components.md`](docs/components.md) for a full breakdown of all UI components and their responsibilities.
+## Code Quality & Refactoring
+- Unused components (MultiWordTurn, WordInput) have been removed from the main app.
+- Refactor plan in place to extract custom hooks from TileGrid and Timeline for maintainability.
 
-## Logic
-See [`docs/logic.md`](docs/logic.md) for a detailed explanation of the application's logic, turn flow, and state management.
+## Contributing
+- See the roadmap for current priorities and open tasks.
+- Please help expand Storybook controls and polish stories for all components.
+- Open issues for bugs, feature requests, or questions.
 
-## Data Model
-See [`docs/data.md`](docs/data.md) for all TypeScript types and data flow documentation.
-
-## How It Works
-- Players enter their names and starting scores.
-- On each turn, a player enters a word (or multiple words in multi-word mode).
-- Words are validated and scored according to Scrabble rules, including letter/word multipliers and bingo bonuses.
-- The turn is completed, and all words are added to the game history and score sheet.
-- Recent plays and full score sheet are available for review. Turns can be undone if needed.
-
-## Development
-1. Install dependencies:
-   ```sh
-   npm install
-   ```
-2. Start the development server:
-   ```sh
-   npm run dev
-   ```
-3. Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-## Storybook & UI Explorer
-Storybook lets you visually explore, test, and document all UI components in isolation.
-
-1. Start Storybook:
-   ```sh
-   npm run storybook
-   ```
-2. Open [http://localhost:6006](http://localhost:6006) in your browser.
-3. Browse, interact with, and test all components (with real app CSS and Tailwind styles).
-
-- Storybook is great for onboarding, design review, and rapid UI iteration.
-- See stories in `src/components/stories/` and within each component folder.
-
-## Further Reading
-- [Components Documentation](docs/components.md)
-- [Logic Documentation](docs/logic.md)
-- [Data Model Documentation](docs/data.md)
-
----
-
-For more details, see the `docs/` directory for in-depth documentation on each part of the application.
+## Roadmap
+See [docs/roadmap.md](docs/roadmap.md) for detailed sprints, themes, and next steps.
 

@@ -11,6 +11,7 @@
     - [x] All words (from shelf and input) are saved and displayed in recent plays
     - [x] Add clear feedback for users if the button is disabled (e.g., tooltip or helper text)
     - [x] Add tests for edge cases (multi-word, empty input, invalid input)
+- [x] Remove unused components (MultiWordTurn, WordInput) from main app
 - [ ] **LetterBag: show tile score & count**
     - [ ] Update LetterBag UI so each tile displays both its letter score and the count of remaining tiles
     - [ ] Make the display visually clear and accessible (color, font size, layout)
@@ -19,9 +20,15 @@
 - [ ] Remove reset button from game page (move to timeline)
 - [ ] Timer: auto-start, unpause on play, sync with game state
 - [x] Add Storybook and stories for all major components
+- [x] Add stories for header and game management components (HeaderControls, HeaderNav, TurnManager, LogoWithFallback)
 - [x] Integrate app CSS (Tailwind) into Storybook for visual parity
-- [ ] Polish Storybook stories (add controls, actions, docs)
-- [ ] Finalize and stabilize automated tests for CI
+- [ ] Polish Storybook stories (add controls, actions, docs, edge cases)
+    - [x] RecentPlays story polished with edge cases and actions
+    - [ ] Controls checklist in progress for all components
+- [x] Finalize and stabilize automated tests for CI
+- [ ] Refactor TileGrid and Timeline to use custom hooks for state/effects
+    - [ ] Extract useTileInputState, useWordValidation, useRestoreTiles, useBingoConfetti, useTileGridShortcuts
+    - [ ] Extract useGameSessions for Timeline
 
 ### Sprint 2: Score Sheet & Readability
 **Goal:** Make the score page clear, beautiful, and easy to use.
