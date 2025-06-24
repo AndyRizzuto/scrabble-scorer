@@ -8,15 +8,11 @@ const meta: Meta<typeof HeaderControls> = {
   parameters: {
     docs: {
       description: {
-        component: 'HeaderControls provides game control buttons including edit scores, switch turn, and tile bag access.',
+        component: 'HeaderControls provides essential game controls including switch turn, clear tiles, and tile bag access.',
       },
     },
   },
   argTypes: {
-    editingScores: {
-      control: 'boolean',
-      description: 'Whether score editing mode is active',
-    },
     canSwitchTurn: {
       control: 'boolean',
       description: 'Whether the turn switch button should be enabled',
@@ -29,8 +25,8 @@ const meta: Meta<typeof HeaderControls> = {
       control: { type: 'number', min: 0, max: 100 },
       description: 'Number of tiles remaining in the bag',
     },
-    onToggleEditScores: { action: 'toggle edit scores' },
     onSwitchTurn: { action: 'switch turn' },
+    onClearTiles: { action: 'clear tiles' },
     onShowTileModal: { action: 'show tile modal' },
   },
   tags: ['autodocs'],
@@ -41,40 +37,36 @@ type Story = StoryObj<typeof HeaderControls>;
 
 export const Default: Story = {
   args: {
-    editingScores: false,
     canSwitchTurn: true,
     usedTiles: 7,
     tilesRemaining: 91,
-    ResponsiveTimer: <span>⏱️ 02:34</span>,
-  },
-};
-
-export const EditingScores: Story = {
-  args: {
-    editingScores: true,
-    canSwitchTurn: false,
-    usedTiles: 14,
-    tilesRemaining: 84,
-    ResponsiveTimer: <span>⏱️ 05:42</span>,
+    GameTimer: <span>⏱️ 02:34</span>,
   },
 };
 
 export const TurnDisabled: Story = {
   args: {
-    editingScores: false,
     canSwitchTurn: false,
-    usedTiles: 21,
-    tilesRemaining: 77,
-    ResponsiveTimer: <span>⏱️ 01:15</span>,
+    usedTiles: 14,
+    tilesRemaining: 84,
+    GameTimer: <span>⏱️ 05:42</span>,
   },
 };
 
 export const LowTiles: Story = {
   args: {
-    editingScores: false,
     canSwitchTurn: true,
     usedTiles: 95,
     tilesRemaining: 3,
-    ResponsiveTimer: <span>⏱️ 12:58</span>,
+    GameTimer: <span>⏱️ 12:58</span>,
+  },
+};
+
+export const NoTilesLeft: Story = {
+  args: {
+    canSwitchTurn: true,
+    usedTiles: 98,
+    tilesRemaining: 0,
+    GameTimer: <span>⏱️ 18:45</span>,
   },
 };

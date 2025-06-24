@@ -704,15 +704,12 @@ const ScrabbleScorer: React.FC = () => {
           {/* Header Controls Row */}
           {currentPage === 'game' && (
             <HeaderControls
-              editingScores={editingScores}
-              onToggleEditScores={handleToggleEditScores}
               onSwitchTurn={switchTurn}
               canSwitchTurn={currentTurnWords.length === 0}
               onShowTileModal={() => setShowTileModal(true)}
               usedTiles={usedTiles}
               tilesRemaining={currentGame.tilesRemaining}
-              onEndGame={endGame}
-              gameStatus={currentGame.status}
+              onClearTiles={handleClearTiles}
               GameTimer={
                 <GameTimer
                   gameStartTime={currentGame.startTime}
@@ -844,6 +841,10 @@ const ScrabbleScorer: React.FC = () => {
                   players={players}
                   gameHistory={gameHistory}
                   getWinStats={getWinStats}
+                  editingScores={editingScores}
+                  onToggleEditScores={handleToggleEditScores}
+                  onEndGame={endGame}
+                  gameStatus={currentGame.status}
                 />
                 <TurnTimeAnalytics
                   gameHistory={gameHistory}
@@ -874,11 +875,6 @@ const ScrabbleScorer: React.FC = () => {
                     setUsedTiles(tiles || 0);
                   }}
                   onValidationChange={setValidationResult}
-                  recentPlays={gameHistory}
-                  players={{
-                    player1: { name: players.player1.name },
-                    player2: { name: players.player2.name }
-                  }}
                   currentTurnWords={currentTurnWords.map(w => ({
                     word: w.word,
                     points: w.finalPoints,
@@ -889,7 +885,6 @@ const ScrabbleScorer: React.FC = () => {
                   restoreToTiles={restoreToTiles}
                   restoreMultipliers={restoreMultipliers || undefined}
                   onCompleteTurn={completeTurn}
-                  onUndoTurn={undoTurn}
                   onAddWordAndCompleteTurn={handleAddWordAndCompleteTurn}
                 />
               </>

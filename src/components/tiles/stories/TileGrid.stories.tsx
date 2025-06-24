@@ -23,8 +23,6 @@ const baseProps = {
   onClear: () => alert('Clear'),
   onCompleteTurn: () => alert('Complete Turn'),
   currentTurnWords: [],
-  recentPlays: [],
-  players: { player1: { name: 'Alice' }, player2: { name: 'Bob' } },
 };
 
 export const Default: Story = {
