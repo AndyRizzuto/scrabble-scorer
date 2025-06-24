@@ -30,6 +30,8 @@ export interface GameHistoryEntry {
   bingoBonus?: boolean;
   basePoints?: number;
   isTurnSummary?: boolean;
+  turnDuration?: number; // Turn duration in milliseconds
+  turnStartTime?: number; // When turn started (timestamp)
 }
 
 export interface GameState {

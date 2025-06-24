@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit3, ArrowRightLeft } from 'lucide-react';
+import { Edit3, ArrowRightLeft, Square } from 'lucide-react';
 
 interface HeaderControlsProps {
   editingScores: boolean;
@@ -9,7 +9,9 @@ interface HeaderControlsProps {
   onShowTileModal: () => void;
   usedTiles: number;
   tilesRemaining: number;
-  ResponsiveTimer: React.ReactNode;
+  GameTimer: React.ReactNode;
+  onEndGame?: () => void;
+  gameStatus: 'active' | 'paused' | 'final';
 }
 
 const HeaderControls: React.FC<HeaderControlsProps> = ({
@@ -20,7 +22,9 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
   onShowTileModal,
   usedTiles,
   tilesRemaining,
-  ResponsiveTimer
+  GameTimer,
+  onEndGame,
+  gameStatus
 }) => (
   <div className="flex items-center justify-between gap-4 mb-4">
     <div className="flex items-center gap-4">
@@ -45,6 +49,16 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
       >
         <ArrowRightLeft className="w-5 h-5" />
       </button>
+      {/* End Game Button - Only show for active/paused games */}
+      {gameStatus !== 'final' && onEndGame && (
+        <button
+          onClick={onEndGame}
+          className="p-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          title="End game"
+        >
+          <Square className="w-5 h-5" />
+        </button>
+      )}
       {/* Tile Distribution Pill - Responsive */}
       <button
         onClick={onShowTileModal}
@@ -54,8 +68,8 @@ const HeaderControls: React.FC<HeaderControlsProps> = ({
         🎒 {tilesRemaining - usedTiles} in bag
       </button>
     </div>
-    {/* Turn Timer - Right justified */}
-    {ResponsiveTimer}
+    {/* Game Timer - Right justified */}
+    {GameTimer}
   </div>
 );
 

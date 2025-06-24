@@ -25,6 +25,9 @@ import ScoreSheet from './score/ScoreSheet';
 import LogoWithFallback from './header/LogoWithFallback';
 import TileBagButton from './tiles/TileBagButton';
 import ResponsiveTimer from './score/ResponsiveTimer';
+import GameTimer from './timers/GameTimer';
+import TurnTimeAnalytics from './analytics/TurnTimeAnalytics';
+import { DEFAULT_PLAYERS } from '../constants/defaults';
 
 const ScrabbleScorer: React.FC = () => {
   // Game management state
@@ -39,8 +42,8 @@ const ScrabbleScorer: React.FC = () => {
     pausedTime: 0,
     currentTurnStartTime: Date.now(),
     players: {
-      player1: { id: 1, name: 'Andrew', score: 0 },
-      player2: { id: 2, name: 'Carla', score: 0 }
+      player1: { id: 1, name: DEFAULT_PLAYERS.PLAYER1_NAME, score: 0 },
+      player2: { id: 2, name: DEFAULT_PLAYERS.PLAYER2_NAME, score: 0 }
     },
     currentPlayer: 1 as 1 | 2,
     gameHistory: [],
@@ -96,7 +99,7 @@ const ScrabbleScorer: React.FC = () => {
     const player1Name = 'Player 1';
     const player2Name = 'Player 2';    
     return {
-      player1: andrewWins.sort((a, b) => a - b), // Andrew has 2 wins
+      player1: andrewWins.sort((a, b) => a - b), // Player 1 has 2 wins
       player2: carlaWins.sort((a, b) => a - b) // Sort chronologically
     };
   };
@@ -259,6 +262,8 @@ const ScrabbleScorer: React.FC = () => {
     
     const totalPoints = getTurnTotal();
     const playerKey = `player${currentPlayer}` as const;
+    const turnEndTime = Date.now();
+    const turnDuration = currentGame.currentTurnStartTime ? turnEndTime - currentGame.currentTurnStartTime : 0;
     
     // Create new word entries for history
     const newHistoryEntries: GameHistoryEntry[] = [];
@@ -273,7 +278,9 @@ const ScrabbleScorer: React.FC = () => {
         bonuses: wordEntry.bonuses,
         letterMultipliers: wordEntry.letterMultipliers,
         bingoBonus: wordEntry.bingoBonus,
-        basePoints: wordEntry.basePoints
+        basePoints: wordEntry.basePoints,
+        turnDuration: turnDuration,
+        turnStartTime: currentGame.currentTurnStartTime
       });
     });
 
@@ -284,7 +291,9 @@ const ScrabbleScorer: React.FC = () => {
         word: `TURN TOTAL (${currentTurnWords.length} words)`,
         points: totalPoints,
         time: new Date().toISOString(),
-        isTurnSummary: true
+        isTurnSummary: true,
+        turnDuration: turnDuration,
+        turnStartTime: currentGame.currentTurnStartTime
       });
     }
     
@@ -412,8 +421,11 @@ const ScrabbleScorer: React.FC = () => {
 
   const resetGame = () => {
     if (confirm('Are you sure you want to reset the game? This will clear all scores and history.')) {
-      // Determine winner before resetting
-      if (players.player1.score > 0 || players.player2.score > 0) {
+      // Finalize current game before resetting
+      if (currentGameId && (players.player1.score > 0 || players.player2.score > 0)) {
+        setGameStatus(currentGameId, 'final');
+        
+        // Determine winner and add to wins
         const winner = players.player1.score > players.player2.score ? 1 : 
                       players.player2.score > players.player1.score ? 2 : null;
         
@@ -426,17 +438,14 @@ const ScrabbleScorer: React.FC = () => {
         }
       }
       
-      // Replace legacy state resets with updateCurrentGame
-      updateCurrentGame({
-        players: {
-          player1: { id: 1, name: 'Andrew', score: 0 },
-          player2: { id: 2, name: 'Carla', score: 0 }
-        },
-        currentPlayer: 1,
-        gameHistory: [],
-        currentTurnWords: [],
-        usedLetters: {}
-      });
+      // Create a new game
+      const setupData: SetupData = {
+        player1Name: DEFAULT_PLAYERS.PLAYER1_NAME,
+        player2Name: DEFAULT_PLAYERS.PLAYER2_NAME, 
+        player1Score: 0,
+        player2Score: 0
+      };
+      handleSetupSubmit(setupData);
       setShowSetupModal(true);
     }
   };
@@ -608,6 +617,26 @@ const ScrabbleScorer: React.FC = () => {
     });
   };
 
+  const endGame = () => {
+    if (confirm('Are you sure you want to end this game? The current scores will be final.')) {
+      if (currentGameId) {
+        setGameStatus(currentGameId, 'final');
+        
+        // Determine winner and add to wins
+        const winner = players.player1.score > players.player2.score ? 1 : 
+                      players.player2.score > players.player1.score ? 2 : null;
+        
+        if (winner) {
+          const now = Date.now();
+          setGameWins(prev => ({
+            ...prev,
+            [`player${winner}`]: [...prev[`player${winner}` as keyof typeof prev], now]
+          }));
+        }
+      }
+    }
+  };
+
   // Calculate win statistics
   const getWinStats = (playerKey: 'player1' | 'player2') => {
     const wins = gameWins[playerKey];
@@ -682,18 +711,22 @@ const ScrabbleScorer: React.FC = () => {
               onShowTileModal={() => setShowTileModal(true)}
               usedTiles={usedTiles}
               tilesRemaining={currentGame.tilesRemaining}
-              ResponsiveTimer={
-                <ResponsiveTimer
-                  isActive={currentGame.status === 'active' && currentPage === 'game'}
-                  onTimerPaused={() => {
+              onEndGame={endGame}
+              gameStatus={currentGame.status}
+              GameTimer={
+                <GameTimer
+                  gameStartTime={currentGame.startTime}
+                  gameEndTime={currentGame.endTime}
+                  pausedTime={currentGame.pausedTime}
+                  lastPauseStart={currentGame.lastPauseStart}
+                  gameStatus={currentGame.status}
+                  onPause={() => {
                     if (currentGameId) setGameStatus(currentGameId, 'paused');
                   }}
-                  currentPlayer={currentPlayer}
-                  turnStartTime={currentGame.currentTurnStartTime}
-                  onTimerExpired={() => {
-                    // Optional: auto-switch turn when timer expires
-                    console.log('Timer expired for', players[`player${currentPlayer}`].name);
+                  onResume={() => {
+                    if (currentGameId) setGameStatus(currentGameId, 'active');
                   }}
+                  compact={true}
                 />
               }
             />
@@ -806,11 +839,17 @@ const ScrabbleScorer: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <ScoreSheet
-                players={players}
-                gameHistory={gameHistory}
-                getWinStats={getWinStats}
-              />
+              <div className="space-y-6">
+                <ScoreSheet
+                  players={players}
+                  gameHistory={gameHistory}
+                  getWinStats={getWinStats}
+                />
+                <TurnTimeAnalytics
+                  gameHistory={gameHistory}
+                  currentPlayer={currentPlayer}
+                />
+              </div>
             )}
           </div>
         ) : (

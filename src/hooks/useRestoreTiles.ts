@@ -10,7 +10,6 @@ interface UseRestoreTilesProps {
   setMultipliers: (multipliers: number[]) => void;
   setWordMultiplier: (multiplier: number) => void;
   setCurrentFocus: (focus: number) => void;
-  setValidationResult: (result: null) => void;
   validateWordAsync: (word: string) => Promise<void>;
 }
 
@@ -21,8 +20,7 @@ export const useRestoreTiles = ({
   setMultipliers,
   setWordMultiplier,
   setCurrentFocus,
-  setValidationResult,
-  validateWordAsync,
+  validateWordAsync
 }: UseRestoreTilesProps) => {
   useEffect(() => {
     if (restoreToTiles && restoreToTiles.length > 0) {
@@ -48,12 +46,10 @@ export const useRestoreTiles = ({
         setWordMultiplier(1);
       }
       
-      setValidationResult(null);
-      
       // Trigger validation for the restored word
       if (restoreToTiles.length >= 2) {
         validateWordAsync(restoreToTiles);
       }
     }
-  }, [restoreToTiles, restoreMultipliers, setLetters, setMultipliers, setWordMultiplier, setCurrentFocus, setValidationResult, validateWordAsync]);
+  }, [restoreToTiles, restoreMultipliers, setLetters, setMultipliers, setWordMultiplier, setCurrentFocus, validateWordAsync]);
 };

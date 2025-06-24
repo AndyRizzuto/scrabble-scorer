@@ -239,15 +239,15 @@ const Timeline: React.FC<TimelineProps> = ({ players, gameHistory, gameWins, gam
                         <div className="flex items-center gap-1">
                           {session.status === 'active' && (
                             <><Play className="w-4 h-4 text-green-500" />
-                            <span className="font-medium text-green-600">Active</span></>
+                            <span className="font-medium text-green-600">Playing</span></>
                           )}
                           {session.status === 'paused' && (
                             <><Pause className="w-4 h-4 text-yellow-500" />
-                            <span className="font-medium text-yellow-600">Paused</span></>
+                            <span className="font-medium text-yellow-600">In Progress</span></>
                           )}
                           {session.status === 'final' && (
-                            <><CheckCircle className="w-4 h-4 text-gray-500" />
-                            <span className="font-medium text-gray-600">Final</span></>
+                            <><CheckCircle className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium text-blue-600">Completed</span></>
                           )}
                         </div>
                       </div>

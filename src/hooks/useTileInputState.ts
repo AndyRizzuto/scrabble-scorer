@@ -1,97 +1,90 @@
-import { useState, useCallback } from 'react';
-import { calculateWordValue, calculateBonusPoints } from '../utils/scoring';
+import { useState, useEffect } from 'react';
+import { calculateBonusPoints } from '../utils/scoring';
 
 interface UseTileInputStateReturn {
-  // State
   letters: string[];
   multipliers: number[];
   wordMultiplier: number;
   currentFocus: number;
-  
-  // Methods
+  setLetters: (letters: string[]) => void;
+  setMultipliers: (multipliers: number[]) => void;
+  setWordMultiplier: (multiplier: number) => void;
+  setCurrentFocus: (focus: number) => void;
   handleLetterChange: (index: number, letter: string) => void;
   handleMultiplierChange: (index: number) => void;
   handleNext: (index: number) => void;
   handlePrevious: (index: number) => void;
   getCurrentWord: () => string;
   calculateCurrentPoints: () => number;
-  handleClear: () => void;
-  setLetters: (letters: string[]) => void;
-  setMultipliers: (multipliers: number[]) => void;
-  setWordMultiplier: (multiplier: number) => void;
-  setCurrentFocus: (focus: number) => void;
+  clearTiles: () => void;
 }
 
-export const useTileInputState = (
-  onClear: () => void,
-  onWordChange?: (word: string, points: number, tiles?: number) => void
-): UseTileInputStateReturn => {
+export const useTileInputState = (): UseTileInputStateReturn => {
   const [letters, setLetters] = useState<string[]>(new Array(7).fill(''));
   const [multipliers, setMultipliers] = useState<number[]>(new Array(7).fill(1));
   const [wordMultiplier, setWordMultiplier] = useState(1);
   const [currentFocus, setCurrentFocus] = useState(0);
 
-  const getCurrentWord = useCallback(() => {
-    return letters.join('').trim();
-  }, [letters]);
+  const handleLetterChange = (index: number, letter: string) => {
+    const newLetters = [...letters];
+    newLetters[index] = letter;
+    setLetters(newLetters);
+  };
 
-  const calculateCurrentPoints = useCallback(() => {
+  const handleMultiplierChange = (index: number) => {
+    const newMultipliers = [...multipliers];
+    newMultipliers[index] = newMultipliers[index] === 1 ? 2 : newMultipliers[index] === 2 ? 3 : 1;
+    setMultipliers(newMultipliers);
+  };
+
+  const handleNext = (index: number) => {
+    if (index < 6) {
+      setCurrentFocus(index + 1);
+    }
+  };
+
+  const handlePrevious = (index: number) => {
+    if (index > 0) {
+      setCurrentFocus(index - 1);
+    }
+  };
+
+  const getCurrentWord = () => {
+    return letters.join('').trim();
+  };
+
+  const calculateCurrentPoints = () => {
     const word = getCurrentWord();
     if (!word) return 0;
 
     const usedTiles = letters.filter(l => l !== '').length;
-    const isBingo = usedTiles === 7; // Auto-detect bingo when all 7 tiles are used
+    const isBingo = usedTiles === 7;
     
     return calculateBonusPoints(word, multipliers, wordMultiplier, isBingo);
-  }, [letters, multipliers, wordMultiplier, getCurrentWord]);
+  };
 
-  const handleLetterChange = useCallback((index: number, letter: string) => {
-    const newLetters = [...letters];
-    newLetters[index] = letter;
-    setLetters(newLetters);
-  }, [letters]);
-
-  const handleMultiplierChange = useCallback((index: number) => {
-    const newMultipliers = [...multipliers];
-    newMultipliers[index] = newMultipliers[index] === 1 ? 2 : newMultipliers[index] === 2 ? 3 : 1;
-    setMultipliers(newMultipliers);
-  }, [multipliers]);
-
-  const handleNext = useCallback((index: number) => {
-    if (index < 6) {
-      setCurrentFocus(index + 1);
-    }
-  }, []);
-
-  const handlePrevious = useCallback((index: number) => {
-    if (index > 0) {
-      setCurrentFocus(index - 1);
-    }
-  }, []);
-
-  const handleClear = useCallback(() => {
+  const clearTiles = () => {
     setLetters(new Array(7).fill(''));
     setMultipliers(new Array(7).fill(1));
     setWordMultiplier(1);
     setCurrentFocus(0);
-    onClear();
-  }, [onClear]);
+  };
 
   return {
     letters,
-    multipliers, 
+    multipliers,
     wordMultiplier,
     currentFocus,
+    setLetters,
+    setMultipliers,
+    setWordMultiplier,
+    setCurrentFocus,
     handleLetterChange,
     handleMultiplierChange,
     handleNext,
     handlePrevious,
     getCurrentWord,
     calculateCurrentPoints,
-    handleClear,
-    setLetters,
-    setMultipliers,
-    setWordMultiplier,
-    setCurrentFocus,
+    clearTiles
   };
 };

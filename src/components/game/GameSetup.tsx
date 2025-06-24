@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { SetupData } from '../../types/game';
+import { DEFAULT_PLAYERS } from '../../constants/defaults';
 
 interface GameSetupProps {
   onSetupSubmit: (data: SetupData) => void;
@@ -10,16 +11,16 @@ interface GameSetupProps {
 
 const GameSetup: React.FC<GameSetupProps> = ({ onSetupSubmit, onClose, canClose = false }) => {
   const [setupData, setSetupData] = useState<SetupData>({
-    player1Name: 'Andrew',
-    player2Name: 'Carla',
+    player1Name: DEFAULT_PLAYERS.PLAYER1_NAME,
+    player2Name: DEFAULT_PLAYERS.PLAYER2_NAME,
     player1Score: 0,
     player2Score: 0
   });
 
   const handleSubmit = () => {
     onSetupSubmit({
-      player1Name: setupData.player1Name || 'Andrew',
-      player2Name: setupData.player2Name || 'Carla',
+      player1Name: setupData.player1Name || DEFAULT_PLAYERS.PLAYER1_NAME,
+      player2Name: setupData.player2Name || DEFAULT_PLAYERS.PLAYER2_NAME,
       player1Score: setupData.player1Score || 0,
       player2Score: setupData.player2Score || 0
     });

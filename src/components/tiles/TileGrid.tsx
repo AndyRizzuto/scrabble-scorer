@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { RotateCcw, PlusCircle, CheckCircle2, Undo2 } from 'lucide-react';
 import TileInput from './TileInput';
 import RecentPlays from '../score/RecentPlays';
+import WordShelf from '../game/WordShelf';
+import SuccessAnimation from '../animations/SuccessAnimation';
 import { calculateWordValue, calculateBonusPoints, validateWord, LETTER_VALUES } from '../../utils/scoring';
 import { ValidationResult, GameHistoryEntry } from '../../types/game';
 
@@ -66,6 +68,9 @@ const TileGrid: React.FC<TileGridProps> = ({
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [successAnimationType, setSuccessAnimationType] = useState<'word-added' | 'turn-completed' | 'bingo'>('word-added');
+  const [successPoints, setSuccessPoints] = useState(0);
 
   const tileRefs = useRef<HTMLInputElement[]>([]);
 
@@ -136,13 +141,18 @@ const TileGrid: React.FC<TileGridProps> = ({
         if (e.metaKey || e.ctrlKey) {
           // Command+Return (Mac) or Ctrl+Return (Windows/Linux) = Complete Turn
           e.preventDefault();
-          if (onCompleteTurn && currentTurnWords.length > 0) {
-            onCompleteTurn();
+          const word = getCurrentWord();
+          const isValidWord = word && validationResult?.valid;
+          const hasWordsInTray = currentTurnWords.length > 0;
+          
+          // Complete turn if there's a valid word on tiles OR words in tray
+          if (isValidWord || hasWordsInTray) {
+            handleCompleteTurn();
           }
         } else {
-          // Return = Add Word
+          // Return = Add Another Word
           e.preventDefault();
-          const word = letters.join('').trim();
+          const word = getCurrentWord();
           const points = calculateCurrentPoints();
           if (word && points > 0 && validationResult?.valid) {
             handleAddWord();
@@ -156,7 +166,7 @@ const TileGrid: React.FC<TileGridProps> = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [letters, multipliers, wordMultiplier, validationResult?.valid, currentTurnWords, onCompleteTurn, onAddWord]);
+  }, [letters, multipliers, wordMultiplier, validationResult?.valid, currentTurnWords, getCurrentWord, calculateCurrentPoints]);
 
   const handleLetterChange = (index: number, letter: string) => {
     const newLetters = [...letters];
@@ -247,18 +257,41 @@ const TileGrid: React.FC<TileGridProps> = ({
         letterMultipliers: multipliers.slice(0, usedTiles),
         bingoBonus: isBingo
       });
+      
+      // Show success animation
+      setSuccessPoints(points);
+      setSuccessAnimationType(isBingo ? 'bingo' : 'word-added');
+      setShowSuccessAnimation(true);
+      
       handleClear();
     }
   };
 
   // Handler for Complete Turn button
   const handleCompleteTurn = () => {
+    const totalPoints = currentTurnWords.reduce((sum, word) => sum + word.points, 0);
+    const currentWordPoints = currentWord && validationResult?.valid ? calculateCurrentPoints() : 0;
+    
     if (currentWord && validationResult?.valid) {
+      // If there's a valid word on tiles, add it first then complete
       handleAddWord();
       setTimeout(() => {
-        if (onCompleteTurn) onCompleteTurn();
-      }, 0);
+        // Show turn completion animation
+        setSuccessPoints(totalPoints + currentWordPoints);
+        setSuccessAnimationType(usedTiles === 7 ? 'bingo' : 'turn-completed');
+        setShowSuccessAnimation(true);
+        
+        // Complete the turn
+        if (onCompleteTurn) {
+          onCompleteTurn();
+        }
+      }, 100);
     } else if (!currentWord && currentTurnWords.length > 0) {
+      // No current word, just complete the turn with existing words
+      setSuccessPoints(totalPoints);
+      setSuccessAnimationType('turn-completed');
+      setShowSuccessAnimation(true);
+      
       if (onCompleteTurn) onCompleteTurn();
     }
     // If input is not empty and not valid, do nothing (button should be disabled)
@@ -293,36 +326,6 @@ const TileGrid: React.FC<TileGridProps> = ({
             </button>
           </div>
           
-          {/* Word Shelf - Current Turn Words */}
-          {currentTurnWords.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {currentTurnWords.map((wordEntry, index) => (
-                <div
-                  key={index}
-                  className="group flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer text-xs"
-                  onClick={() => onWordClick?.(wordEntry.word, wordEntry.definition)}
-                >
-                  <span className="font-mono">{wordEntry.word}</span>
-                  <span className="text-gray-500">+{wordEntry.points}</span>
-                  {onRemoveWord && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveWord(index, {
-                          word: currentWord,
-                          points: currentPoints,
-                          isValid: validationResult?.valid || false
-                        });
-                      }}
-                      className="ml-1 w-3 h-3 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
           
           {usedTiles === 7 && (
             <div className={`px-3 py-1 rounded-full text-sm font-bold border transition-all duration-300 ${
@@ -375,6 +378,21 @@ const TileGrid: React.FC<TileGridProps> = ({
       )}
 
 
+      {/* Word Shelf - Full width when there are words */}
+      {currentTurnWords.length > 0 && (
+        <WordShelf
+          currentTurnWords={currentTurnWords}
+          onRemoveWord={onRemoveWord}
+          onWordClick={onWordClick}
+          currentWordInfo={{
+            word: currentWord,
+            points: currentPoints,
+            isValid: validationResult?.valid || false
+          }}
+          className="mb-6"
+        />
+      )}
+
       {/* Split Layout: Action Buttons (35%) | Recent Plays (65%) */}
       <div className="grid grid-cols-5 gap-4">
         {/* Action Buttons - Left Side */}
@@ -416,6 +434,14 @@ const TileGrid: React.FC<TileGridProps> = ({
           onUndoTurn={onUndoTurn}
         />
       </div>
+
+      {/* Success Animation */}
+      <SuccessAnimation
+        show={showSuccessAnimation}
+        type={successAnimationType}
+        points={successPoints}
+        onComplete={() => setShowSuccessAnimation(false)}
+      />
     </div>
   );
 };
