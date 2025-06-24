@@ -1,9 +1,11 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { LETTER_VALUES } from '../../utils/scoring';
 
 interface TileDistributionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  usedTiles?: Record<string, number>; // Track tiles used in game
 }
 
 // Standard Scrabble tile distribution
@@ -13,12 +15,12 @@ const TILE_DISTRIBUTION = {
   U: 4, V: 2, W: 2, X: 1, Y: 2, Z: 1
 };
 
-const TileDistributionModal: React.FC<TileDistributionModalProps> = ({ isOpen, onClose }) => {
+const TileDistributionModal: React.FC<TileDistributionModalProps> = ({ isOpen, onClose, usedTiles = {} }) => {
   if (!isOpen) return null;
 
   const totalTiles = Object.values(TILE_DISTRIBUTION).reduce((sum, count) => sum + count, 0);
-  const usedTiles = 14; // Assuming each player starts with 7 tiles
-  const remainingTiles = totalTiles - usedTiles;
+  const totalUsedTiles = Object.values(usedTiles).reduce((sum, count) => sum + count, 0);
+  const remainingTiles = totalTiles - totalUsedTiles;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -39,31 +41,34 @@ const TileDistributionModal: React.FC<TileDistributionModalProps> = ({ isOpen, o
             <div className="text-2xl font-bold text-gray-800">{remainingTiles}</div>
             <div className="text-sm text-gray-600">tiles remaining</div>
             <div className="text-xs text-gray-500 mt-1">
-              (Started with {totalTiles}, players have {usedTiles})
+              (Started with {totalTiles}, {totalUsedTiles} used)
             </div>
           </div>
 
           <div className="grid grid-cols-6 gap-2 text-center">
             {Object.entries(TILE_DISTRIBUTION).map(([letter, originalCount]) => {
-              // For now, showing original distribution - in a real game you'd track used tiles
-              const remaining = originalCount; // This would be calculated based on actual game state
+              const used = usedTiles[letter] || 0;
+              const remaining = Math.max(0, originalCount - used);
+              const letterValue = LETTER_VALUES[letter as keyof typeof LETTER_VALUES];
               
               return (
                 <div 
                   key={letter}
-                  className={`p-2 rounded border ${
-                    remaining === 0 ? 'bg-red-50 border-red-200 text-red-400' : 'bg-gray-50 border-gray-200'
+                  className={`p-2 rounded border transition-colors ${
+                    remaining === 0 ? 'bg-red-50 border-red-200 text-red-400' : 'bg-gray-50 border-gray-200 hover:bg-blue-50 hover:border-blue-200'
                   }`}
+                  title={`${letter}: ${letterValue} point${letterValue === 1 ? '' : 's'}, ${remaining} remaining`}
                 >
-                  <div className="font-bold">{letter}</div>
-                  <div className="text-xs">{remaining}</div>
+                  <div className="font-bold text-lg">{letter}</div>
+                  <div className="text-xs text-gray-600">{letterValue}pt</div>
+                  <div className="text-xs font-medium">{remaining}</div>
                 </div>
               );
             })}
           </div>
 
           <div className="mt-4 text-xs text-gray-500 text-center">
-            Tap any letter to see its point value and remaining count
+            Each tile shows: <span className="font-medium">Letter, Point Value, Count Remaining</span>
           </div>
         </div>
       </div>

@@ -78,5 +78,6 @@ export interface Game {
   currentTurnWords: WordEntry[];
   winner?: 1 | 2 | null;
   tilesRemaining: number;
+  usedLetters: Record<string, number>; // Track specific letters used in game
 }
 
