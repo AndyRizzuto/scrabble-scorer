@@ -60,6 +60,7 @@ const TileGrid: React.FC<TileGridProps> = ({
   onUndoTurn,
   onAddWordAndCompleteTurn
 }) => {
+  // --- Move getCurrentWord and calculateCurrentPoints to the very top of the component, before any useEffect or usage ---
   const [letters, setLetters] = useState<string[]>(new Array(7).fill(''));
   const [multipliers, setMultipliers] = useState<number[]>(new Array(7).fill(1));
   const [wordMultiplier, setWordMultiplier] = useState(1);
@@ -73,6 +74,20 @@ const TileGrid: React.FC<TileGridProps> = ({
   const [successPoints, setSuccessPoints] = useState(0);
 
   const tileRefs = useRef<HTMLInputElement[]>([]);
+
+  const getCurrentWord = () => {
+    return letters.join('').trim();
+  };
+
+  const calculateCurrentPoints = () => {
+    const word = getCurrentWord();
+    if (!word) return 0;
+
+    const usedTiles = letters.filter(l => l !== '').length;
+    const isBingo = usedTiles === 7; // Auto-detect bingo when all 7 tiles are used
+    
+    return calculateBonusPoints(word, multipliers, wordMultiplier, isBingo);
+  };
 
   // Trigger confetti when bingo is achieved
   useEffect(() => {
@@ -213,20 +228,6 @@ const TileGrid: React.FC<TileGridProps> = ({
     if (index > 0) {
       setCurrentFocus(index - 1);
     }
-  };
-
-  const getCurrentWord = () => {
-    return letters.join('').trim();
-  };
-
-  const calculateCurrentPoints = () => {
-    const word = getCurrentWord();
-    if (!word) return 0;
-
-    const usedTiles = letters.filter(l => l !== '').length;
-    const isBingo = usedTiles === 7; // Auto-detect bingo when all 7 tiles are used
-    
-    return calculateBonusPoints(word, multipliers, wordMultiplier, isBingo);
   };
 
   const handleClear = () => {
