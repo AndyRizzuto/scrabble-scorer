@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { RotateCcw, PlusCircle, CheckCircle2, Undo2 } from 'lucide-react';
 import TileInput from './TileInput';
-import RecentPlays from '../score/RecentPlays';
 import WordShelf from '../game/WordShelf';
 import SuccessAnimation from '../animations/SuccessAnimation';
 import { calculateWordValue, calculateBonusPoints, validateWord, LETTER_VALUES } from '../../utils/scoring';
@@ -18,12 +17,6 @@ interface TileGridProps {
   onClear: () => void;
   onWordChange?: (word: string, points: number, tiles?: number) => void;
   onValidationChange?: (result: ValidationResult | null) => void;
-  recentPlays?: GameHistoryEntry[];
-  players?: {
-    player1: { name: string };
-    player2: { name: string };
-  };
-  onResetGame?: () => void;
   currentTurnWords?: Array<{word: string; points: number; definition?: string}>;
   onRemoveWord?: (index: number, currentWordInfo?: {word: string, points: number, isValid: boolean}) => void;
   onWordClick?: (word: string, definition?: string) => void;
@@ -33,7 +26,6 @@ interface TileGridProps {
     wordMultiplier: number;
   };
   onCompleteTurn?: () => void;
-  onUndoTurn?: (turnIndex: number) => void;
   onAddWordAndCompleteTurn?: (word: string, points: number, wordData?: Partial<{
     basePoints: number;
     bonusPoints: number;
@@ -48,16 +40,12 @@ const TileGrid: React.FC<TileGridProps> = ({
   onClear, 
   onWordChange, 
   onValidationChange,
-  recentPlays = [],
-  players,
-  onResetGame,
   currentTurnWords = [],
   onRemoveWord,
   onWordClick,
   restoreToTiles,
   restoreMultipliers,
   onCompleteTurn,
-  onUndoTurn,
   onAddWordAndCompleteTurn
 }) => {
   // --- Move getCurrentWord and calculateCurrentPoints to the very top of the component, before any useEffect or usage ---
@@ -310,45 +298,18 @@ const TileGrid: React.FC<TileGridProps> = ({
           <div className="text-4xl animate-bounce">🎉🎊✨</div>
         </div>
       )}
-      {/* Compact Controls Row */}
-      <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-700">Word:</span>
-            <button
-              onClick={() => setWordMultiplier(wordMultiplier === 1 ? 2 : wordMultiplier === 2 ? 3 : 1)}
-              className={`px-4 py-2 rounded-full text-base font-medium transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center touch-manipulation ${
-                wordMultiplier === 1 ? 'bg-gray-200 text-gray-700' :
-                wordMultiplier === 2 ? 'bg-red-100 text-red-700 border border-red-300' :
-                'bg-purple-100 text-purple-700 border border-purple-300'
-              }`}
-            >
-              {wordMultiplier}x
-            </button>
+      {/* Bingo Indicator Row */}
+      {usedTiles === 7 && (
+        <div className="flex justify-center">
+          <div className={`px-4 py-2 rounded-full text-lg font-bold border transition-all duration-300 ${
+            showConfetti 
+              ? 'bg-gradient-to-r from-yellow-200 to-orange-200 text-orange-800 border-orange-300 animate-pulse' 
+              : 'bg-yellow-100 text-yellow-800 border-yellow-300'
+          }`}>
+            🎉 BINGO! +50 Points
           </div>
-          
-          
-          {usedTiles === 7 && (
-            <div className={`px-3 py-1 rounded-full text-sm font-bold border transition-all duration-300 ${
-              showConfetti 
-                ? 'bg-gradient-to-r from-yellow-200 to-orange-200 text-orange-800 border-orange-300 animate-pulse' 
-                : 'bg-yellow-100 text-yellow-800 border-yellow-300'
-            }`}>
-              🎉 BINGO! +50
-            </div>
-          )}
         </div>
-
-        {/* Clear Button */}
-        <button
-          onClick={handleClear}
-          className="ml-2 flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-          title="Clear tiles"
-        >
-          <RotateCcw className="w-4 h-4" />
-          <span>Clear</span>
-        </button>
-      </div>
+      )}
 
       {/* Tile Grid */}
       <div className="flex justify-center">
@@ -379,34 +340,26 @@ const TileGrid: React.FC<TileGridProps> = ({
       )}
 
 
-      {/* Word Shelf - Full width when there are words */}
-      {currentTurnWords.length > 0 && (
-        <WordShelf
-          currentTurnWords={currentTurnWords}
-          onRemoveWord={onRemoveWord}
-          onWordClick={onWordClick}
-          currentWordInfo={{
-            word: currentWord,
-            points: currentPoints,
-            isValid: validationResult?.valid || false
-          }}
-          className="mb-6"
-        />
-      )}
-
-      {/* Split Layout: Action Buttons (35%) | Recent Plays (65%) */}
-      <div className="grid grid-cols-5 gap-4">
-        {/* Action Buttons - Left Side */}
-        <div className="col-span-2 space-y-2">
+      {/* Split Layout: Action Buttons (35%) | Turn Words (65%) */}
+      <div className="grid grid-cols-5 gap-4 min-h-[120px]">
+        {/* Controls - Left Side */}
+        <div className="col-span-2 space-y-3">
+          {/* Word Multiplier */}
           <button
-            type="button"
-            onClick={handleAddWord}
-            disabled={!currentWord || isValidating || !validationResult?.valid}
-            className="w-full flex items-center justify-center px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 transition-colors font-medium touch-manipulation text-sm"
+            onClick={() => setWordMultiplier(wordMultiplier === 1 ? 2 : wordMultiplier === 2 ? 3 : 1)}
+            className={`w-full px-4 py-3 rounded-lg text-lg font-bold transition-all duration-200 ${
+              wordMultiplier === 1 
+                ? 'bg-gray-100 text-gray-600 border-2 border-gray-300 hover:bg-gray-200' 
+                : wordMultiplier === 2 
+                  ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-700 border-2 border-red-300 hover:from-red-200 hover:to-red-300 shadow-md' 
+                  : 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 border-2 border-purple-300 hover:from-purple-200 hover:to-purple-300 shadow-md'
+            }`}
           >
-            Add Another Word
+            {wordMultiplier}× Word
           </button>
+
           
+          {/* Complete Turn Button */}
           <button
             type="button"
             onClick={handleCompleteTurn}
@@ -415,7 +368,7 @@ const TileGrid: React.FC<TileGridProps> = ({
               isValidating ||
               (!currentWord && currentTurnWords.length === 0)
             }
-            className="w-full flex flex-col items-center justify-center px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 transition-colors font-medium touch-manipulation text-sm"
+            className="w-full flex flex-col items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 transition-colors font-medium touch-manipulation"
             title={
               (currentWord && !validationResult?.valid)
                 ? 'Enter a valid word or clear the input to complete the turn.'
@@ -427,13 +380,21 @@ const TileGrid: React.FC<TileGridProps> = ({
           </button>
         </div>
 
-        {/* Recent Plays - Right Side with 3 Columns (65% width) */}
-        <RecentPlays
-          recentPlays={recentPlays}
-          players={players}
-          onResetGame={onResetGame}
-          onUndoTurn={onUndoTurn}
-        />
+        {/* Turn Words - Right Side */}
+        <div className="col-span-3">
+          <WordShelf
+            currentTurnWords={currentTurnWords}
+            onRemoveWord={onRemoveWord}
+            onWordClick={onWordClick}
+            currentWordInfo={{
+              word: currentWord,
+              points: currentPoints,
+              isValid: validationResult?.valid || false
+            }}
+            onAddWord={currentWord && validationResult?.valid ? handleAddWord : undefined}
+            className="h-full"
+          />
+        </div>
       </div>
 
       {/* Success Animation */}

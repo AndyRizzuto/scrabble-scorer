@@ -8,9 +8,22 @@ const meta: Meta<typeof ScoreSheet> = {
   parameters: {
     docs: {
       description: {
-        component: 'ScoreSheet displays the full game score sheet for both players, including win stats and game history.'
+        component: 'ScoreSheet displays the full game score sheet for both players, including win stats, game history, and game controls.'
       }
     }
+  },
+  argTypes: {
+    editingScores: {
+      control: 'boolean',
+      description: 'Whether score editing mode is active',
+    },
+    gameStatus: {
+      control: 'select',
+      options: ['active', 'paused', 'final'],
+      description: 'Current game status',
+    },
+    onToggleEditScores: { action: 'toggle edit scores' },
+    onEndGame: { action: 'end game' },
   },
   tags: ['autodocs'],
 };
@@ -35,12 +48,50 @@ export const Default: Story = {
     players,
     gameHistory,
     getWinStats,
+    editingScores: false,
+    gameStatus: 'active',
   },
-  parameters: {
-    docs: {
-      source: {
-        code: `<ScoreSheet players={players} gameHistory={gameHistory} getWinStats={getWinStats} />`,
-      },
+};
+
+export const WithControls: Story = {
+  args: {
+    players,
+    gameHistory,
+    getWinStats,
+    editingScores: false,
+    gameStatus: 'active',
+  },
+};
+
+export const EditingMode: Story = {
+  args: {
+    players,
+    gameHistory,
+    getWinStats,
+    editingScores: true,
+    gameStatus: 'active',
+  },
+};
+
+export const GameCompleted: Story = {
+  args: {
+    players,
+    gameHistory,
+    getWinStats,
+    editingScores: false,
+    gameStatus: 'final',
+  },
+};
+
+export const EmptyHistory: Story = {
+  args: {
+    players: {
+      player1: { name: 'Alice', score: 0 },
+      player2: { name: 'Bob', score: 0 },
     },
+    gameHistory: [],
+    getWinStats,
+    editingScores: false,
+    gameStatus: 'active',
   },
 };

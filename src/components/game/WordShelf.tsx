@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trophy } from 'lucide-react';
+import { X, Plus, PlusCircle } from 'lucide-react';
 
 interface WordEntry {
   word: string;
@@ -12,6 +12,7 @@ interface WordShelfProps {
   onRemoveWord?: (index: number, currentWordInfo?: {word: string, points: number, isValid: boolean}) => void;
   onWordClick?: (word: string, definition?: string) => void;
   currentWordInfo?: {word: string, points: number, isValid: boolean};
+  onAddWord?: () => void;
   className?: string;
 }
 
@@ -20,6 +21,7 @@ const WordShelf: React.FC<WordShelfProps> = ({
   onRemoveWord,
   onWordClick,
   currentWordInfo,
+  onAddWord,
   className = ''
 }) => {
   const [animatingWords, setAnimatingWords] = useState<Set<number>>(new Set());
@@ -63,14 +65,26 @@ const WordShelf: React.FC<WordShelfProps> = ({
 
   if (currentTurnWords.length === 0) {
     return (
-      <div className={`bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-6 text-center ${className}`}>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-            <Plus className="w-6 h-6 text-gray-400" />
+      <div className={`bg-gray-50 border border-gray-200 rounded-xl p-4 transition-all duration-300 ${className}`}>
+        <div className="flex items-center justify-between mb-4">
+          {/* Add Word Button - disabled state */}
+          <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg">
+            <PlusCircle className="w-4 h-4" />
+            <span className="font-medium">Add Word</span>
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-600 mb-1">Word Shelf</h3>
-            <p className="text-sm text-gray-500">Add words to build your turn</p>
+          
+          <div className="text-right">
+            <div className="text-lg font-bold text-gray-400">+0</div>
+            <div className="text-xs text-gray-500">Total Points</div>
+          </div>
+        </div>
+        
+        <div className="text-center py-4">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+              <Plus className="w-4 h-4 text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-500">Create words on tiles to build your turn</p>
           </div>
         </div>
       </div>
@@ -78,14 +92,26 @@ const WordShelf: React.FC<WordShelfProps> = ({
   }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-xl p-4 shadow-sm ${className}`}>
+    <div className={`bg-white border border-gray-200 rounded-xl p-4 shadow-sm transition-all duration-300 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-blue-600" />
-          <h3 className="font-semibold text-gray-800">Turn Words</h3>
-          <span className="text-sm text-gray-500">({currentTurnWords.length})</span>
-        </div>
+        {/* Add Word Button - appears when there's a valid current word */}
+        {currentWordInfo && currentWordInfo.isValid && currentWordInfo.word && onAddWord ? (
+          <button
+            onClick={onAddWord}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            title={`Add "${currentWordInfo.word.toUpperCase()}" (+${currentWordInfo.points} pts)`}
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span className="font-medium">Add Word</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg">
+            <PlusCircle className="w-4 h-4" />
+            <span className="font-medium">Add Word</span>
+          </div>
+        )}
+        
         <div className="text-right">
           <div className="text-lg font-bold text-blue-600">+{getTotalPoints()}</div>
           <div className="text-xs text-gray-500">Total Points</div>
