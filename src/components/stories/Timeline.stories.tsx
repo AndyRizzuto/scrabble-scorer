@@ -6,6 +6,25 @@ import type { GameStatus, WordEntry } from '../../types/game';
 const meta: Meta<typeof Timeline> = {
   title: 'Game/Timeline',
   component: Timeline,
+  parameters: {
+    docs: {
+      description: {
+        component: 'Timeline displays game history, player statistics, and allows starting new games. Shows win streaks and game durations.',
+      },
+    },
+  },
+  argTypes: {
+    onCreateGame: { action: 'create new game' },
+    onGameClick: { action: 'game clicked' },
+    formatDuration: { 
+      description: 'Function to format game duration from milliseconds to readable string',
+      table: { category: 'Functions' }
+    },
+    getGameDuration: { 
+      description: 'Function to calculate game duration from start/end times',
+      table: { category: 'Functions' }
+    },
+  },
   tags: ['autodocs'],
 };
 export default meta;

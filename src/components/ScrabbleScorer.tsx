@@ -45,7 +45,8 @@ const ScrabbleScorer: React.FC = () => {
     currentPlayer: 1 as 1 | 2,
     gameHistory: [],
     currentTurnWords: [],
-    tilesRemaining: 98
+    tilesRemaining: 98,
+    usedLetters: {}
   };
   
   // Legacy state for backward compatibility (derived from currentGame)
@@ -167,8 +168,15 @@ const ScrabbleScorer: React.FC = () => {
       bingoBonus: wordData?.bingoBonus || false,
       tilesUsed: word.length
     };
+
+    // Track letters used
+    const newUsedLetters = { ...currentGame.usedLetters };
+    word.toUpperCase().split('').forEach(letter => {
+      newUsedLetters[letter] = (newUsedLetters[letter] || 0) + 1;
+    });
     updateCurrentGame({
-      currentTurnWords: [...currentGame.currentTurnWords, newWord]
+      currentTurnWords: [...currentGame.currentTurnWords, newWord],
+      usedLetters: newUsedLetters
     });
   };
 
@@ -193,9 +201,16 @@ const ScrabbleScorer: React.FC = () => {
         tilesUsed: currentWordInfo.word.length
       };
       
+      // Track letters used in current word
+      const newUsedLetters = { ...currentGame.usedLetters };
+      currentWordInfo.word.toUpperCase().split('').forEach(letter => {
+        newUsedLetters[letter] = (newUsedLetters[letter] || 0) + 1;
+      });
+
       // Add current word to shelf
       updateCurrentGame({
-        currentTurnWords: [...currentGame.currentTurnWords, newWordEntry]
+        currentTurnWords: [...currentGame.currentTurnWords, newWordEntry],
+        usedLetters: newUsedLetters
       });
     }
     
@@ -215,8 +230,22 @@ const ScrabbleScorer: React.FC = () => {
     
     // Remove the word from the turn (with slight delay to allow current word to be added first)
     setTimeout(() => {
+      // Reverse letter tracking for removed word
+      const newUsedLetters = { ...currentGame.usedLetters };
+      if (wordToRestore) {
+        wordToRestore.word.toUpperCase().split('').forEach(letter => {
+          if (newUsedLetters[letter] > 0) {
+            newUsedLetters[letter] = newUsedLetters[letter] - 1;
+            if (newUsedLetters[letter] === 0) {
+              delete newUsedLetters[letter];
+            }
+          }
+        });
+      }
+
       updateCurrentGame({
-        currentTurnWords: currentGame.currentTurnWords.filter((_, i) => i !== index)
+        currentTurnWords: currentGame.currentTurnWords.filter((_, i) => i !== index),
+        usedLetters: newUsedLetters
       });
     }, 50);
   };
@@ -329,6 +358,19 @@ const ScrabbleScorer: React.FC = () => {
       }
     };
     
+    // Reverse letter tracking for undone words
+    const newUsedLetters = { ...currentGame.usedLetters };
+    turnToUndo.entries.forEach(entry => {
+      entry.word.toUpperCase().split('').forEach(letter => {
+        if (newUsedLetters[letter] > 0) {
+          newUsedLetters[letter] = newUsedLetters[letter] - 1;
+          if (newUsedLetters[letter] === 0) {
+            delete newUsedLetters[letter];
+          }
+        }
+      });
+    });
+
     // Restore words: all but last to shelf, last to tiles
     const wordsToRestore = turnToUndo.entries.map(entry => ({
       word: entry.word,
@@ -363,7 +405,8 @@ const ScrabbleScorer: React.FC = () => {
       gameHistory: newHistory,
       players: newPlayers,
       currentPlayer: turnToUndo.player as 1 | 2,  // Switch back to the player who played that turn
-      currentTurnWords: wordsForShelf  // Restore other words to shelf
+      currentTurnWords: wordsForShelf,  // Restore other words to shelf
+      usedLetters: newUsedLetters
     });
   };
 
@@ -391,7 +434,8 @@ const ScrabbleScorer: React.FC = () => {
         },
         currentPlayer: 1,
         gameHistory: [],
-        currentTurnWords: []
+        currentTurnWords: [],
+        usedLetters: {}
       });
       setShowSetupModal(true);
     }
@@ -448,7 +492,8 @@ const ScrabbleScorer: React.FC = () => {
       currentPlayer: 1,
       gameHistory: [],
       currentTurnWords: [],
-      tilesRemaining: 98
+      tilesRemaining: 98,
+      usedLetters: {}
     };
     return newGame;
   };
@@ -795,7 +840,6 @@ const ScrabbleScorer: React.FC = () => {
                     player1: { name: players.player1.name },
                     player2: { name: players.player2.name }
                   }}
-                  onResetGame={resetGame}
                   currentTurnWords={currentTurnWords.map(w => ({
                     word: w.word,
                     points: w.finalPoints,
@@ -817,7 +861,8 @@ const ScrabbleScorer: React.FC = () => {
       {/* Tile Distribution Modal */}
       <TileDistributionModal 
         isOpen={showTileModal} 
-        onClose={() => setShowTileModal(false)} 
+        onClose={() => setShowTileModal(false)}
+        usedTiles={currentGame.usedLetters}
       />
     </div>
   );

@@ -7,6 +7,10 @@ const meta: Meta<typeof GameSetup> = {
   title: 'Game/GameSetup',
   component: GameSetup,
   parameters: {
+    layout: 'fullscreen',
+    viewport: {
+      defaultViewport: 'responsive',
+    },
     docs: {
       description: {
         component: 'GameSetup collects player names and starting scores before a game begins.'
@@ -14,6 +18,13 @@ const meta: Meta<typeof GameSetup> = {
     }
   },
   tags: ['autodocs'],
+  decorators: [
+    (Story) => (
+      <div style={{ height: '100vh', width: '100vw' }}>
+        <Story />
+      </div>
+    ),
+  ],
 };
 export default meta;
 

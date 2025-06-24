@@ -7,6 +7,10 @@ const meta: Meta<typeof RecentPlays> = {
   component: RecentPlays,
   tags: ['autodocs'],
   parameters: {
+    layout: 'padded',
+    viewport: {
+      defaultViewport: 'responsive',
+    },
     docs: {
       description: {
         component: 'Displays the most recent plays grouped by turn, with breakdowns for word, bonuses, and totals. Supports undo and reset actions.',
@@ -17,6 +21,13 @@ const meta: Meta<typeof RecentPlays> = {
     onResetGame: { action: 'reset game' },
     onUndoTurn: { action: 'undo turn' },
   },
+  decorators: [
+    (Story) => (
+      <div style={{ minHeight: '600px', width: '100%', padding: '20px' }}>
+        <Story />
+      </div>
+    ),
+  ],
 };
 export default meta;
 
@@ -76,5 +87,17 @@ export const Empty: Story = {
   args: {
     recentPlays: [],
     players: { player1: { name: 'Alice' }, player2: { name: 'Bob' } },
+  },
+};
+
+export const WithResetButton: Story = {
+  args: {
+    recentPlays: [
+      { player: 1, word: 'HELLO', points: 8, time: '2025-06-22T12:00:00Z' },
+      { player: 2, word: 'WORLD', points: 10, time: '2025-06-22T12:01:00Z' },
+      { player: 1, word: 'QUEST', points: 14, time: '2025-06-22T12:02:00Z' },
+    ],
+    players: { player1: { name: 'Alice' }, player2: { name: 'Bob' } },
+    onResetGame: () => {}, // When provided, shows reset button (e.g., for timeline usage)
   },
 };

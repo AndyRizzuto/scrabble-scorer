@@ -12,19 +12,23 @@
     - [x] Add clear feedback for users if the button is disabled (e.g., tooltip or helper text)
     - [x] Add tests for edge cases (multi-word, empty input, invalid input)
 - [x] Remove unused components (MultiWordTurn, WordInput) from main app
-- [ ] **LetterBag: show tile score & count**
-    - [ ] Update LetterBag UI so each tile displays both its letter score and the count of remaining tiles
-    - [ ] Make the display visually clear and accessible (color, font size, layout)
-    - [ ] Ensure LetterBag updates in real time as tiles are played
-    - [ ] Add tests for tile count and score updates
-- [ ] Remove reset button from game page (move to timeline)
+- [x] **LetterBag: show tile score & count**
+    - [x] Update LetterBag UI so each tile displays both its letter score and the count of remaining tiles
+    - [x] Make the display visually clear and accessible (color, font size, layout)
+    - [x] Ensure LetterBag updates in real time as tiles are played
+    - [x] Add Storybook stories for tile count and score functionality
+- [x] Remove reset button from game page (move to timeline)
 - [ ] Timer: auto-start, unpause on play, sync with game state
 - [x] Add Storybook and stories for all major components
 - [x] Add stories for header and game management components (HeaderControls, HeaderNav, TurnManager, LogoWithFallback)
 - [x] Integrate app CSS (Tailwind) into Storybook for visual parity
-- [ ] Polish Storybook stories (add controls, actions, docs, edge cases)
+- [x] Polish Storybook stories (add controls, actions, docs, edge cases)
     - [x] RecentPlays story polished with edge cases and actions
-    - [ ] Controls checklist in progress for all components
+    - [x] Controls checklist completed for all components
+    - [x] Updated TurnManager, HeaderControls, ScoreDisplay, TileInput with full controls
+    - [x] Fixed viewport issues for modal components (GameSetup, TileDistributionModal)
+    - [x] Added comprehensive documentation and argTypes
+    - [x] Converted legacy stories to proper Meta/StoryObj format
 - [x] Finalize and stabilize automated tests for CI
 - [ ] Refactor TileGrid and Timeline to use custom hooks for state/effects
     - [ ] Extract useTileInputState, useWordValidation, useRestoreTiles, useBingoConfetti, useTileGridShortcuts
